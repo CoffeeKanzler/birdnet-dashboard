@@ -44,16 +44,17 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ## 2) Testing-Strategie (derzeit praktisch nicht vorhanden)
 
 ### Befund
-- Keine erkennbaren Testdateien / kein Test-Runner im Projekt.
-- Kritische Logik (Mapping, Deduplizierung, Datumsfenster, Matching) ist ungetestet.
+- Test-Runner ist jetzt eingerichtet (Vitest + RTL) und `npm test` ist verfuegbar.
+- Erste API-Unit-Tests sind vorhanden (`src/api/birdnet.test.ts`, aktuell 4 Tests).
+- Weitere kritische Logik (Matching/Hooks/UI-Flows) ist noch ungetestet.
 
 ### Empfehlung
 - Minimal starten mit Vitest + React Testing Library.
 - Fokus auf deterministische Kernlogik vor UI-Details.
 
 ### Agent-Tasks
-- [ ] **P0:** Test-Stack (Vitest + RTL) aufsetzen inkl. `npm test` Script.
-- [ ] **P0:** Unit-Tests für `src/api/birdnet.ts` (Normalisierung, Pagination, Range-Filter).
+- [x] **P0:** Test-Stack (Vitest + RTL) aufsetzen inkl. `npm test` Script.
+- [x] **P0:** Unit-Tests fuer `src/api/birdnet.ts` (Normalisierung, Pagination, Range-Filter).
 - [ ] **P1:** Unit-Tests für `useNotableSpotlight` und Species-Matching Logik.
 - [ ] **P1:** Integrationstest für Hauptnavigation (`landing/today/archive/rarity/species`) inkl. URL-State.
 - [ ] **P2:** Smoke-E2E für „App lädt + API-Fehlerzustand sichtbar“.
