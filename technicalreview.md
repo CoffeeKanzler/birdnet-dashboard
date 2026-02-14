@@ -37,7 +37,8 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ### Agent-Tasks
 - [x] **P0:** Lint-Fehler in `useArchiveDetections.ts` beheben (`no-constant-condition`).
 - [x] **P1:** `react-hooks/exhaustive-deps`-Warnings in `App.tsx` und `SpeciesDetailView.tsx` sauber aufloesen.
-- [ ] **P1:** CI-Pipeline so definieren, dass PRs ohne gruenes Lint nicht mergebar sind.
+- [x] **P1:** CI-Pipeline fuer Lint/Test/Build ist definiert (`quality-gate` in `.github/workflows/ci.yml`).
+- [ ] **P1:** Branch-Protection so konfigurieren, dass `quality-gate` als Required Check erzwungen wird.
 
 ---
 
