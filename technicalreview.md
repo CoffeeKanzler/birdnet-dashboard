@@ -11,7 +11,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 2. API-Layer ist zentralisiert, aber User-facing Fehlermeldungen/Policies sind noch nicht einheitlich.
 3. Routing und URL-State sind manuell implementiert (wartungsintensiv).
 4. Dokumentation ist verbessert, aber noch nicht vollstaendig (ADR/Runbook offen).
-5. Security Hardening im NGINX ist rudimentaer (fehlende Security Headers/CSP).
+5. Security-Baseline ist deutlich verbessert; weitere Hardening-Tiefe bleibt optional.
 
 ## Status-Update (bereits umgesetzt)
 
@@ -76,7 +76,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 - Reusable Data-Layer (API Client + Query Keys + gemeinsame Error-Policy).
 
 ### Agent-Tasks
-- [ ] **P1:** Architektur-RFC: Routing-Migration auf React Router (inkl. Übergangsstrategie).
+- [x] **P1:** Architektur-RFC erstellt (`docs/rfc/routing-migration.md`).
 - [x] **P1:** API-Client eingefuehrt (`src/api/apiClient.ts`) inkl. Timeout/Retry/Fehlerklassifikation.
 - [ ] **P2:** Hooks auf gemeinsames Query-Layer migrieren (inkrementell pro Feature).
 
@@ -121,7 +121,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ### Agent-Tasks
 - [x] **P1:** Security Header Set in NGINX ergaenzt (`docker/nginx.conf`).
 - [x] **P1:** Dependency-Audit in CI ist aktiv (`vulnerability-audit` in `.github/workflows/security.yml`).
-- [ ] **P2:** Container-Image-Scan (z. B. Trivy/Grype) in CI aufnehmen.
+- [x] **P2:** Container-Image-Scan in CI aktiv (`container-image-scan` via Trivy in `.github/workflows/security.yml`).
 
 ---
 
@@ -142,8 +142,8 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 
 ### Agent-Tasks
 - [x] **P0:** README vollstaendig projektbezogen neu strukturiert.
-- [ ] **P1:** `docs/` Bereich für Architektur-Entscheidungen (ADR/RFC) anlegen.
-- [ ] **P2:** Runbook für Betrieb (Incidents, API down, image fetch issues) ergänzen.
+- [x] **P1:** `docs/` Bereich fuer Architektur-Entscheidungen angelegt (`docs/README.md`, `docs/rfc/`).
+- [x] **P2:** Runbook fuer Betrieb ergaenzt (`docs/runbook.md`).
 
 ---
 
