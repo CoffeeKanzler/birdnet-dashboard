@@ -7,8 +7,8 @@ Stand: 2026-02-14 (aktualisiert nach Follow-up)
 Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen**), hat aber weiterhin klare Luecken bei **Testabdeckung, Architektur-Konsistenz und Betriebsreife**.
 
 **Top-Defizite:**
-1. Testabdeckung ist aufgebaut, aber noch nicht vollstaendig (insbesondere E2E fehlt).
-2. API-Layer ist zentralisiert, aber User-facing Fehlermeldungen/Policies sind noch nicht einheitlich.
+1. Testabdeckung ist aufgebaut, aber noch nicht vollstaendig (E2E aktuell als Smoke-Level).
+2. API-Layer ist zentralisiert; weitere Vereinheitlichung der Error-Policies ueber alle Features bleibt sinnvoll.
 3. Routing und URL-State sind manuell implementiert (wartungsintensiv).
 4. Dokumentation ist verbessert, aber noch nicht vollstaendig (ADR/Runbook offen).
 5. Security-Baseline ist deutlich verbessert; weitere Hardening-Tiefe bleibt optional.
@@ -39,7 +39,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 - [x] **P0:** Lint-Fehler in `useArchiveDetections.ts` beheben (`no-constant-condition`).
 - [x] **P1:** `react-hooks/exhaustive-deps`-Warnings in `App.tsx` und `SpeciesDetailView.tsx` sauber aufloesen.
 - [x] **P1:** CI-Pipeline fuer Lint/Test/Build ist definiert (`quality-gate` in `.github/workflows/ci.yml`).
-- [x] **P1:** Branch-Protection konfiguriert: `quality-gate` ist als Required Check auf `main` aktiv.
+- [x] **P1:** Branch-Protection konfiguriert: `quality-gate` und `e2e-smoke` sind als Required Checks auf `main` aktiv.
 
 ---
 
@@ -59,7 +59,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 - [x] **P0:** Unit-Tests fuer `src/api/birdnet.ts` (Normalisierung, Pagination, Range-Filter).
 - [x] **P1:** Unit-Tests fuer `useNotableSpotlight` und Species-Matching Logik.
 - [x] **P1:** Integrationstest fuer Hauptnavigation (`landing/today/archive/rarity/species`) inkl. URL-State.
-- [ ] **P2:** Smoke-E2E für „App lädt + API-Fehlerzustand sichtbar“.
+- [x] **P2:** Smoke-E2E fuer „App laedt + API-Fehlerzustand sichtbar“ (`e2e/smoke.spec.ts`).
 
 ---
 
@@ -86,7 +86,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 
 ### Befund
 - API-Aufrufe laufen ueber einen zentralen Client (`src/api/apiClient.ts`) mit Timeout/Retry.
-- Fehler sind technisch klassifiziert (HTTP/Timeout/Network/Abort/Parse), aber User-Messages sind noch nicht ueberall konsistent.
+- Fehler sind technisch klassifiziert (HTTP/Timeout/Network/Abort/Parse) und user-facing Meldungen sind in den Haupt-Views vereinheitlicht.
 - Teilweise komplexe Stop-/Paging-Logik ohne explizite Guardrail-Tests.
 
 ### Empfehlung
@@ -99,7 +99,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ### Agent-Tasks
 - [x] **P1:** `apiClient.ts` erstellt (Abort+Timeout, typed error, JSON parsing, base URL handling).
 - [x] **P1:** API-Calls auf zentralen Client migriert (`src/api/birdnet.ts`, `src/api/birdImages.ts`).
-- [ ] **P2:** User-facing Fehlermeldungen standardisieren (freundlich + technisch verwertbar).
+- [x] **P2:** User-facing Fehlermeldungen in den Haupt-Views standardisiert (`src/utils/errorMessages.ts` + Hook-Migration).
 
 ---
 
