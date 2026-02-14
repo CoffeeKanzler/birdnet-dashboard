@@ -1,3 +1,7 @@
+import { ApiClientError, buildApiUrl, requestJson } from './apiClient'
+
+export { getApiBaseUrl } from './apiClient'
+
 export type Detection = {
   id: string
   commonName: string
@@ -133,14 +137,30 @@ const toDetection = (record: DetectionApiRecord): Detection => {
   }
 }
 
-export const getApiBaseUrl = (): string => {
-  const baseUrl = import.meta.env.VITE_BIRDNET_API_BASE_URL ?? ''
+const toBirdnetError = (error: unknown): Error => {
+  if (error instanceof ApiClientError) {
+    if (error.code === 'http' && typeof error.status === 'number') {
+      return new Error(`BirdNET-Anfrage fehlgeschlagen: ${error.status}`)
+    }
 
-  if (!baseUrl) {
-    return ''
+    if (error.code === 'timeout') {
+      return new Error('BirdNET-Anfrage Zeitlimit erreicht')
+    }
+
+    if (error.code === 'aborted') {
+      const abortError = new Error('Anfrage abgebrochen')
+      abortError.name = 'AbortError'
+      return abortError
+    }
+
+    return new Error('BirdNET-Anfrage fehlgeschlagen')
   }
 
-  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
+  if (error instanceof Error) {
+    return error
+  }
+
+  return new Error('BirdNET-Anfrage fehlgeschlagen')
 }
 
 export const fetchDetectionsPage = async ({
@@ -153,22 +173,26 @@ export const fetchDetectionsPage = async ({
     offset: String(offset),
   })
 
-  const response = await fetch(
-    `${getApiBaseUrl()}/api/v2/detections?${params.toString()}`,
-    { signal, cache: 'no-store' },
-  )
-
-  if (!response.ok) {
-    throw new Error(`BirdNET-Anfrage fehlgeschlagen: ${response.status}`)
-  }
-
-  const data = (await response.json()) as
+  let data:
     | DetectionApiRecord[]
     | {
         data?: DetectionApiRecord[]
         detections?: DetectionApiRecord[]
         items?: DetectionApiRecord[]
       }
+
+  try {
+    data = await requestJson<
+      | DetectionApiRecord[]
+      | {
+          data?: DetectionApiRecord[]
+          detections?: DetectionApiRecord[]
+          items?: DetectionApiRecord[]
+        }
+    >(buildApiUrl('/api/v2/detections', params), { signal })
+  } catch (error) {
+    throw toBirdnetError(error)
+  }
 
   const records = Array.isArray(data)
     ? data
@@ -193,16 +217,16 @@ export const fetchDetectionsRangePage = async ({
     offset: String(offset),
   })
 
-  const response = await fetch(
-    `${getApiBaseUrl()}/api/v2/detections?${params.toString()}`,
-    { signal, cache: 'no-store' },
-  )
+  let data: PaginatedDetectionsResponse | DetectionApiRecord[]
 
-  if (!response.ok) {
-    throw new Error(`BirdNET-Anfrage fehlgeschlagen: ${response.status}`)
+  try {
+    data = await requestJson<PaginatedDetectionsResponse | DetectionApiRecord[]>(
+      buildApiUrl('/api/v2/detections', params),
+      { signal },
+    )
+  } catch (error) {
+    throw toBirdnetError(error)
   }
-
-  const data = (await response.json()) as PaginatedDetectionsResponse | DetectionApiRecord[]
 
   const records = Array.isArray(data)
     ? data
@@ -226,16 +250,16 @@ export const fetchRecentDetections = async ({
     limit: String(limit),
   })
 
-  const response = await fetch(
-    `${getApiBaseUrl()}/api/v2/detections/recent?${params.toString()}`,
-    { signal, cache: 'no-store' },
-  )
+  let data: DetectionApiRecord[]
 
-  if (!response.ok) {
-    throw new Error(`BirdNET-Anfrage fehlgeschlagen: ${response.status}`)
+  try {
+    data = await requestJson<DetectionApiRecord[]>(
+      buildApiUrl('/api/v2/detections/recent', params),
+      { signal },
+    )
+  } catch (error) {
+    throw toBirdnetError(error)
   }
-
-  const data = (await response.json()) as DetectionApiRecord[]
 
   return data.map(toDetection).sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp))
 }
@@ -302,16 +326,16 @@ export const fetchSpeciesDetectionsPage = async ({
     offset: String(offset),
   })
 
-  const response = await fetch(
-    `${getApiBaseUrl()}/api/v2/detections?${params.toString()}`,
-    { signal, cache: 'no-store' },
-  )
+  let data: PaginatedDetectionsResponse | DetectionApiRecord[]
 
-  if (!response.ok) {
-    throw new Error(`BirdNET-Anfrage fehlgeschlagen: ${response.status}`)
+  try {
+    data = await requestJson<PaginatedDetectionsResponse | DetectionApiRecord[]>(
+      buildApiUrl('/api/v2/detections', params),
+      { signal },
+    )
+  } catch (error) {
+    throw toBirdnetError(error)
   }
-
-  const data = (await response.json()) as PaginatedDetectionsResponse | DetectionApiRecord[]
 
   const records = Array.isArray(data)
     ? data
@@ -341,20 +365,20 @@ export const fetchSpeciesInfo = async ({
     scientific_name: scientificName,
   })
 
-  const response = await fetch(
-    `${getApiBaseUrl()}/api/v2/species?${params.toString()}`,
-    { signal, cache: 'no-store' },
-  )
+  let data: SpeciesInfoApiResponse
 
-  if (response.status === 404) {
-    return null
+  try {
+    data = await requestJson<SpeciesInfoApiResponse>(
+      buildApiUrl('/api/v2/species', params),
+      { signal, retryOnStatuses: [408, 425, 429, 500, 502, 503, 504] },
+    )
+  } catch (error) {
+    if (error instanceof ApiClientError && error.status === 404) {
+      return null
+    }
+
+    throw toBirdnetError(error)
   }
-
-  if (!response.ok) {
-    throw new Error(`BirdNET-Anfrage fehlgeschlagen: ${response.status}`)
-  }
-
-  const data = (await response.json()) as SpeciesInfoApiResponse
 
   return {
     scientificName: data.scientific_name ?? scientificName,
