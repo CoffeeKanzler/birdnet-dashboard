@@ -6,6 +6,7 @@ import {
   fetchDetectionsPage,
   fetchRecentDetections,
 } from '../../api/birdnet'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 import { captureScrollTop, restoreScrollTop } from '../../utils/scroll'
 
 type UseDetectionsOptions = {
@@ -75,9 +76,7 @@ export const useDetections = (
         return
       }
 
-      setError(
-        err instanceof Error ? err.message : 'Erkennungen konnten nicht geladen werden',
-      )
+      setError(toUserErrorMessage(err, 'Erkennungen konnten nicht geladen werden', 'BirdNET'))
     } finally {
       if (requestId === requestIdRef.current && !controller.signal.aborted) {
         setIsLoading(false)

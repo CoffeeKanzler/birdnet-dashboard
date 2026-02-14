@@ -5,6 +5,7 @@ import {
   fetchDetectionsPage,
   fetchDetectionsRangePage,
 } from '../../api/birdnet'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseArchiveDetectionsState = {
   detections: Detection[]
@@ -179,9 +180,11 @@ export const useArchiveDetections = (
       }
 
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Archiv-Erkennungen konnten nicht geladen werden',
+        toUserErrorMessage(
+          err,
+          'Archiv-Erkennungen konnten nicht geladen werden',
+          'BirdNET',
+        ),
       )
     } finally {
       if (requestId === requestIdRef.current && !controller.signal.aborted) {
