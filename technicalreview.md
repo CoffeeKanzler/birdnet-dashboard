@@ -1,0 +1,219 @@
+# Technical Review – birdnet-dashboard
+
+Stand: 2026-02-14 (aktualisiert nach Follow-up)
+
+## Executive Summary
+
+Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen**), hat aber weiterhin klare Luecken bei **Testabdeckung, Architektur-Konsistenz und Betriebsreife**.
+
+**Top-Defizite:**
+1. Es gibt keine automatisierten Tests (Unit/Integration/E2E).
+2. Daten-Fetching ist verteilt, dupliziert und ohne zentrale Fehler-/Retry-/Timeout-Strategie.
+3. Routing und URL-State sind manuell implementiert (wartungsintensiv).
+4. README/Dokumentation ist noch weitgehend Template-Status.
+5. Security Hardening im NGINX ist rudimentaer (fehlende Security Headers/CSP).
+
+## Status-Update (bereits umgesetzt)
+
+- Lint-Probleme aus dem Review sind behoben:
+  - `no-constant-condition` in `src/features/detections/useArchiveDetections.ts` gefixt.
+  - Hook-Dependency-Warnungen in `src/App.tsx` und `src/features/species/SpeciesDetailView.tsx` aufgeloest.
+- Verifikation erfolgreich:
+  - `npm run lint` passt.
+  - `npm run build` passt.
+
+## Was konkret fehlt / verbessert werden sollte
+
+## 1) Quality Gate & Lint-Disziplin
+
+### Befund
+- `npm run lint` ist lokal wieder gruen.
+- Der CI-Gate-Aspekt bleibt offen: Lint sollte als verpflichtender PR-Check erzwungen werden.
+
+### Empfehlung
+- Lint-Fehler als **P0** beheben und als verpflichtenden CI-Check einführen.
+- Hook-Regeln nicht nur „warn“, sondern zielgerichtet beheben.
+
+### Agent-Tasks
+- [x] **P0:** Lint-Fehler in `useArchiveDetections.ts` beheben (`no-constant-condition`).
+- [x] **P1:** `react-hooks/exhaustive-deps`-Warnings in `App.tsx` und `SpeciesDetailView.tsx` sauber aufloesen.
+- [ ] **P1:** CI-Pipeline so definieren, dass PRs ohne gruenes Lint nicht mergebar sind.
+
+---
+
+## 2) Testing-Strategie (derzeit praktisch nicht vorhanden)
+
+### Befund
+- Keine erkennbaren Testdateien / kein Test-Runner im Projekt.
+- Kritische Logik (Mapping, Deduplizierung, Datumsfenster, Matching) ist ungetestet.
+
+### Empfehlung
+- Minimal starten mit Vitest + React Testing Library.
+- Fokus auf deterministische Kernlogik vor UI-Details.
+
+### Agent-Tasks
+- [ ] **P0:** Test-Stack (Vitest + RTL) aufsetzen inkl. `npm test` Script.
+- [ ] **P0:** Unit-Tests für `src/api/birdnet.ts` (Normalisierung, Pagination, Range-Filter).
+- [ ] **P1:** Unit-Tests für `useNotableSpotlight` und Species-Matching Logik.
+- [ ] **P1:** Integrationstest für Hauptnavigation (`landing/today/archive/rarity/species`) inkl. URL-State.
+- [ ] **P2:** Smoke-E2E für „App lädt + API-Fehlerzustand sichtbar“.
+
+---
+
+## 3) Architektur & State Management
+
+### Befund
+- Routing/History wird händisch in `App.tsx` verwaltet.
+- Mehrere Hooks implementieren ähnliche Fetch-/Abort-/Paging-Muster separat.
+- Gefahr von inkonsistenten Zuständen und zunehmender Komplexität.
+
+### Empfehlung
+- Mittelfristig Router einsetzen (React Router) statt eigener URL-Engine.
+- Serverseitigen Zustand über zentrales Query-Layer (z. B. TanStack Query) vereinheitlichen.
+- Reusable Data-Layer (API Client + Query Keys + gemeinsame Error-Policy).
+
+### Agent-Tasks
+- [ ] **P1:** Architektur-RFC: Routing-Migration auf React Router (inkl. Übergangsstrategie).
+- [ ] **P1:** API-Client einführen (typed responses, Timeout, Retry, Fehlerklassifikation).
+- [ ] **P2:** Hooks auf gemeinsames Query-Layer migrieren (inkrementell pro Feature).
+
+---
+
+## 4) API Robustheit & Fehlerbehandlung
+
+### Befund
+- `fetch`-Aufrufe sind verteilt; es gibt keine zentrale Timeout-/Retry-Strategie.
+- Fehler werden meist nur als Message gereicht; keine klare Klassifikation (4xx/5xx/Netzwerk).
+- Teilweise komplexe Stop-/Paging-Logik ohne explizite Guardrail-Tests.
+
+### Empfehlung
+- API-Layer zentralisieren:
+  - request timeout,
+  - retry nur bei transienten Fehlern,
+  - standardisierte Fehlerobjekte,
+  - optional observability hooks (z. B. error codes).
+
+### Agent-Tasks
+- [ ] **P1:** `apiClient.ts` erstellen (Abort+Timeout, typed error, JSON parsing, base URL handling).
+- [ ] **P1:** Alle API-Calls schrittweise auf Client migrieren.
+- [ ] **P2:** User-facing Fehlermeldungen standardisieren (freundlich + technisch verwertbar).
+
+---
+
+## 5) Security & Deployment Hardening
+
+### Befund
+- NGINX regelt Pfade und Query-Pattern restriktiv (positiv).
+- Es fehlen jedoch typische Security-Header (CSP, X-Frame-Options, Referrer-Policy, etc.).
+- Kein sichtbarer Dependency-/Container-Scan in Pipeline.
+
+### Empfehlung
+- Security-Baseline ergänzen:
+  - CSP (mindestens restriktive Startversion),
+  - `X-Content-Type-Options`,
+  - `X-Frame-Options`/`frame-ancestors`,
+  - `Referrer-Policy`,
+  - HSTS (falls TLS vorgelagert gesichert ist).
+
+### Agent-Tasks
+- [ ] **P1:** Security Header Set in NGINX ergänzen und testen.
+- [ ] **P1:** Dependency-Audit in CI (`npm audit` mit Policy) integrieren.
+- [ ] **P2:** Container-Image-Scan (z. B. Trivy/Grype) in CI aufnehmen.
+
+---
+
+## 6) Dokumentation & Developer Experience
+
+### Befund
+- `README.md` ist noch überwiegend das Vite-Template.
+- Für Onboarding, Betrieb und Troubleshooting fehlen projektspezifische Leitplanken.
+
+### Empfehlung
+- README auf produktiven Stand bringen:
+  - Architektur,
+  - lokale Entwicklung,
+  - Umgebungsvariablen,
+  - Build/Deploy,
+  - bekannte Grenzen,
+  - Troubleshooting.
+
+### Agent-Tasks
+- [ ] **P0:** README vollständig projektbezogen neu strukturieren.
+- [ ] **P1:** `docs/` Bereich für Architektur-Entscheidungen (ADR/RFC) anlegen.
+- [ ] **P2:** Runbook für Betrieb (Incidents, API down, image fetch issues) ergänzen.
+
+---
+
+## 7) Observability & Betrieb
+
+### Befund
+- Frontend-seitige Telemetrie/Monitoring ist nicht erkennbar.
+- Kein Error-Budget-/SLO-orientiertes Monitoring sichtbar.
+
+### Empfehlung
+- Leichtgewichtig starten:
+  - zentraler Error-Reporter,
+  - konsistente Error IDs,
+  - Basis-Metriken (API latency, failure rate).
+
+### Agent-Tasks
+- [ ] **P2:** Frontend Error Tracking integrieren (inkl. Release-Version Tagging).
+- [ ] **P2:** Health-/Availability-Konzept für API-Abhängigkeit dokumentieren.
+
+---
+
+## Priorisierte Umsetzungsreihenfolge (Roadmap)
+
+### Phase 1 (1–3 Tage) – Stabilisieren
+1. Lint auf Grün bringen.
+2. README produktionsfähig machen.
+3. Test-Stack initial aufsetzen + erste Kern-Unit-Tests.
+
+### Phase 2 (3–7 Tage) – Absichern
+1. API-Client zentralisieren.
+2. Security Header in NGINX ergänzen.
+3. CI Gates für Lint/Test/Audit etablieren.
+
+### Phase 3 (1–2 Wochen) – Skalierbarkeit
+1. Routing- und Data-Layer Refactor (Router + Query-Layer).
+2. Observability + Runbooks.
+3. Erweiterte Integration/E2E-Tests.
+
+---
+
+## Task-Template für Agenten (copy/paste)
+
+```md
+### Task: <kurzer Titel>
+**Ziel**
+<Welches Problem wird gelöst?>
+
+**Scope**
+- In Scope: ...
+- Out of Scope: ...
+
+**Technische Umsetzung**
+- ...
+
+**Akzeptanzkriterien**
+- [ ] ...
+- [ ] ...
+
+**Validierung**
+- [ ] `npm run lint`
+- [ ] `npm run build`
+- [ ] relevante Tests
+
+**Risiken / Rollback**
+- Risiko: ...
+- Rollback: ...
+```
+
+## Kurzfazit
+
+Wenn du nur 3 Dinge sofort umsetzt, dann:
+1. **Lint + CI Gate**,
+2. **Test-Foundation**,
+3. **zentraler API-Client mit klarer Fehlerstrategie**.
+
+Damit reduzierst du kurzfristig Bugs und schaffst die Grundlage, um Features schneller und mit weniger Regressionen durch Agenten umsetzen zu lassen.

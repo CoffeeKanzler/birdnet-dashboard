@@ -68,10 +68,7 @@ export const useArchiveDetections = (
       const matchedLookupKeys = new Set<string>()
       let pageCount = 0
 
-      while (true) {
-        if (pageCount >= MAX_RANGE_PAGES) {
-          break
-        }
+      while (pageCount < MAX_RANGE_PAGES) {
 
         const mode = options.queryMode ?? 'range'
         const page =

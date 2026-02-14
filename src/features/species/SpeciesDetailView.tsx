@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   fetchDetectionsPage,
@@ -147,7 +147,7 @@ const SpeciesDetailView = ({
     }
   }, [scientificName])
 
-  const loadFamilyMatches = async () => {
+  const loadFamilyMatches = useCallback(async () => {
     if (!speciesInfo?.familyCommon) {
       return
     }
@@ -437,7 +437,7 @@ const SpeciesDetailView = ({
         setIsFamilyLoading(false)
       }
     }
-  }
+  }, [scientificName, speciesInfo?.familyCommon])
 
   useEffect(() => {
     if (!speciesInfo?.familyCommon) {
@@ -446,7 +446,7 @@ const SpeciesDetailView = ({
     }
 
     void loadFamilyMatches()
-  }, [speciesInfo?.familyCommon])
+  }, [loadFamilyMatches, speciesInfo?.familyCommon])
 
   const description = useMemo(() => {
     const normalizedCommonName = normalize(commonName)
