@@ -7,10 +7,10 @@ Stand: 2026-02-14 (aktualisiert nach Follow-up)
 Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen**), hat aber weiterhin klare Luecken bei **Testabdeckung, Architektur-Konsistenz und Betriebsreife**.
 
 **Top-Defizite:**
-1. Es gibt keine automatisierten Tests (Unit/Integration/E2E).
-2. Daten-Fetching ist verteilt, dupliziert und ohne zentrale Fehler-/Retry-/Timeout-Strategie.
+1. Testabdeckung ist aufgebaut, aber noch nicht vollstaendig (insbesondere E2E fehlt).
+2. API-Layer ist zentralisiert, aber User-facing Fehlermeldungen/Policies sind noch nicht einheitlich.
 3. Routing und URL-State sind manuell implementiert (wartungsintensiv).
-4. README/Dokumentation ist noch weitgehend Template-Status.
+4. Dokumentation ist verbessert, aber noch nicht vollstaendig (ADR/Runbook offen).
 5. Security Hardening im NGINX ist rudimentaer (fehlende Security Headers/CSP).
 
 ## Status-Update (bereits umgesetzt)
@@ -21,6 +21,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 - Verifikation erfolgreich:
   - `npm run lint` passt.
   - `npm run build` passt.
+  - `npm run test` passt.
 
 ## Was konkret fehlt / verbessert werden sollte
 
@@ -38,7 +39,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 - [x] **P0:** Lint-Fehler in `useArchiveDetections.ts` beheben (`no-constant-condition`).
 - [x] **P1:** `react-hooks/exhaustive-deps`-Warnings in `App.tsx` und `SpeciesDetailView.tsx` sauber aufloesen.
 - [x] **P1:** CI-Pipeline fuer Lint/Test/Build ist definiert (`quality-gate` in `.github/workflows/ci.yml`).
-- [ ] **P1:** Branch-Protection so konfigurieren, dass `quality-gate` als Required Check erzwungen wird.
+- [x] **P1:** Branch-Protection konfiguriert: `quality-gate` ist als Required Check auf `main` aktiv.
 
 ---
 
@@ -76,7 +77,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 
 ### Agent-Tasks
 - [ ] **P1:** Architektur-RFC: Routing-Migration auf React Router (inkl. Übergangsstrategie).
-- [ ] **P1:** API-Client einführen (typed responses, Timeout, Retry, Fehlerklassifikation).
+- [x] **P1:** API-Client eingefuehrt (`src/api/apiClient.ts`) inkl. Timeout/Retry/Fehlerklassifikation.
 - [ ] **P2:** Hooks auf gemeinsames Query-Layer migrieren (inkrementell pro Feature).
 
 ---
@@ -84,8 +85,8 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ## 4) API Robustheit & Fehlerbehandlung
 
 ### Befund
-- `fetch`-Aufrufe sind verteilt; es gibt keine zentrale Timeout-/Retry-Strategie.
-- Fehler werden meist nur als Message gereicht; keine klare Klassifikation (4xx/5xx/Netzwerk).
+- API-Aufrufe laufen ueber einen zentralen Client (`src/api/apiClient.ts`) mit Timeout/Retry.
+- Fehler sind technisch klassifiziert (HTTP/Timeout/Network/Abort/Parse), aber User-Messages sind noch nicht ueberall konsistent.
 - Teilweise komplexe Stop-/Paging-Logik ohne explizite Guardrail-Tests.
 
 ### Empfehlung
@@ -96,8 +97,8 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
   - optional observability hooks (z. B. error codes).
 
 ### Agent-Tasks
-- [ ] **P1:** `apiClient.ts` erstellen (Abort+Timeout, typed error, JSON parsing, base URL handling).
-- [ ] **P1:** Alle API-Calls schrittweise auf Client migrieren.
+- [x] **P1:** `apiClient.ts` erstellt (Abort+Timeout, typed error, JSON parsing, base URL handling).
+- [x] **P1:** API-Calls auf zentralen Client migriert (`src/api/birdnet.ts`, `src/api/birdImages.ts`).
 - [ ] **P2:** User-facing Fehlermeldungen standardisieren (freundlich + technisch verwertbar).
 
 ---
@@ -106,8 +107,8 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 
 ### Befund
 - NGINX regelt Pfade und Query-Pattern restriktiv (positiv).
-- Es fehlen jedoch typische Security-Header (CSP, X-Frame-Options, Referrer-Policy, etc.).
-- Kein sichtbarer Dependency-/Container-Scan in Pipeline.
+- Security-Header Baseline ist jetzt vorhanden (CSP, X-Frame-Options, Referrer-Policy, etc.).
+- Dependency-Audit ist in CI vorhanden; Container-Scan fehlt noch.
 
 ### Empfehlung
 - Security-Baseline ergänzen:
@@ -118,8 +119,8 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
   - HSTS (falls TLS vorgelagert gesichert ist).
 
 ### Agent-Tasks
-- [ ] **P1:** Security Header Set in NGINX ergänzen und testen.
-- [ ] **P1:** Dependency-Audit in CI (`npm audit` mit Policy) integrieren.
+- [x] **P1:** Security Header Set in NGINX ergaenzt (`docker/nginx.conf`).
+- [x] **P1:** Dependency-Audit in CI ist aktiv (`vulnerability-audit` in `.github/workflows/security.yml`).
 - [ ] **P2:** Container-Image-Scan (z. B. Trivy/Grype) in CI aufnehmen.
 
 ---
@@ -127,7 +128,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ## 6) Dokumentation & Developer Experience
 
 ### Befund
-- `README.md` ist noch überwiegend das Vite-Template.
+- `README.md` ist jetzt projektbezogen und nicht mehr im Vite-Template-Status.
 - Für Onboarding, Betrieb und Troubleshooting fehlen projektspezifische Leitplanken.
 
 ### Empfehlung
@@ -140,7 +141,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
   - Troubleshooting.
 
 ### Agent-Tasks
-- [ ] **P0:** README vollständig projektbezogen neu strukturieren.
+- [x] **P0:** README vollstaendig projektbezogen neu strukturiert.
 - [ ] **P1:** `docs/` Bereich für Architektur-Entscheidungen (ADR/RFC) anlegen.
 - [ ] **P2:** Runbook für Betrieb (Incidents, API down, image fetch issues) ergänzen.
 
