@@ -45,7 +45,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 
 ### Befund
 - Test-Runner ist jetzt eingerichtet (Vitest + RTL) und `npm test` ist verfuegbar.
-- Erste API-Unit-Tests sind vorhanden (`src/api/birdnet.test.ts`, aktuell 4 Tests).
+- Erste Unit-Tests sind vorhanden (`src/api/birdnet.test.ts`, `src/features/rarity/useNotableSpotlight.test.ts`, aktuell 8 Tests).
 - Weitere kritische Logik (Matching/Hooks/UI-Flows) ist noch ungetestet.
 
 ### Empfehlung
@@ -55,7 +55,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ### Agent-Tasks
 - [x] **P0:** Test-Stack (Vitest + RTL) aufsetzen inkl. `npm test` Script.
 - [x] **P0:** Unit-Tests fuer `src/api/birdnet.ts` (Normalisierung, Pagination, Range-Filter).
-- [ ] **P1:** Unit-Tests für `useNotableSpotlight` und Species-Matching Logik.
+- [x] **P1:** Unit-Tests fuer `useNotableSpotlight` und Species-Matching Logik.
 - [ ] **P1:** Integrationstest für Hauptnavigation (`landing/today/archive/rarity/species`) inkl. URL-State.
 - [ ] **P2:** Smoke-E2E für „App lädt + API-Fehlerzustand sichtbar“.
 
