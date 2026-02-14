@@ -90,10 +90,12 @@ const SUMMARY_ENDPOINTS: Array<{ endpoint: string; wikiHost: string }> = [
 const UNKNOWN_SPECIES_VALUES = new Set(['unknown species', 'unbekannte art'])
 const FALLBACK_WIDTH = 640
 const FALLBACK_HEIGHT = 426
+const MISSING_PHOTO_RETRY_MS = 30 * 60 * 1000
 
 const photoCache = new Map<string, SpeciesPhoto | null>()
 const inflightRequests = new Map<string, Promise<SpeciesPhoto | null>>()
 const attributionRegistry = new Map<string, PhotoAttributionRecord>()
+const missingPhotoRetryAt = new Map<string, number>()
 
 const emitAttributionUpdate = () => {
   if (typeof window !== 'undefined') {
@@ -358,8 +360,15 @@ export const fetchSpeciesPhoto = async ({
 
   const cacheKey = buildCacheKey(normalizedCommon, normalizedScientific)
   const cached = photoCache.get(cacheKey)
-  if (cached !== undefined) {
+  if (cached !== undefined && cached !== null) {
     return cached
+  }
+
+  if (cached === null) {
+    const retryAt = missingPhotoRetryAt.get(cacheKey) ?? 0
+    if (Date.now() < retryAt) {
+      return null
+    }
   }
 
   const inflight = inflightRequests.get(cacheKey)
@@ -388,6 +397,7 @@ export const fetchSpeciesPhoto = async ({
       const photo = await fetchSummaryThumbnail(name, signal)
       if (photo) {
         photoCache.set(cacheKey, photo)
+        missingPhotoRetryAt.delete(cacheKey)
         upsertAttributionRecord(cacheKey, {
           commonName: normalizedCommon || 'Unbekannte Art',
           scientificName: normalizedScientific || 'Unbekannte Art',
@@ -404,6 +414,7 @@ export const fetchSpeciesPhoto = async ({
     }
 
     photoCache.set(cacheKey, null)
+    missingPhotoRetryAt.set(cacheKey, Date.now() + MISSING_PHOTO_RETRY_MS)
     upsertAttributionRecord(cacheKey, {
       commonName: normalizedCommon || 'Unbekannte Art',
       scientificName: normalizedScientific || 'Unbekannte Art',
@@ -414,6 +425,7 @@ export const fetchSpeciesPhoto = async ({
   })()
     .catch((error) => {
       photoCache.set(cacheKey, null)
+      missingPhotoRetryAt.set(cacheKey, Date.now() + MISSING_PHOTO_RETRY_MS)
       throw error
     })
     .finally(() => {
