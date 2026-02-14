@@ -53,6 +53,9 @@ Default dev server: `http://localhost:5173`
 - `VITE_BIRDNET_API_BASE_URL` (optional)
   - Example: `http://localhost:8080`
   - If unset, frontend uses relative `/api/v2/...` paths.
+- `VITE_APP_VERSION` (optional)
+  - Example: `v1.2.3`
+  - Included in frontend error telemetry records.
 
 ## Quality checks
 

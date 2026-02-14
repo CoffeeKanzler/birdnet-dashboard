@@ -122,6 +122,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 - [x] **P1:** Security Header Set in NGINX ergaenzt (`docker/nginx.conf`).
 - [x] **P1:** Dependency-Audit in CI ist aktiv (`vulnerability-audit` in `.github/workflows/security.yml`).
 - [x] **P2:** Container-Image-Scan in CI aktiv (`container-image-scan` via Trivy in `.github/workflows/security.yml`).
+- [x] **P2:** Container-Scan-Triage-Policy dokumentiert (`docs/security/container-scan-triage.md`).
 
 ---
 
@@ -160,7 +161,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
   - Basis-Metriken (API latency, failure rate).
 
 ### Agent-Tasks
-- [ ] **P2:** Frontend Error Tracking integrieren (inkl. Release-Version Tagging).
+- [x] **P2:** Frontend Error Tracking integriert (inkl. Release-Tagging) via `src/observability/errorReporter.ts`.
 - [ ] **P2:** Health-/Availability-Konzept für API-Abhängigkeit dokumentieren.
 
 ---
