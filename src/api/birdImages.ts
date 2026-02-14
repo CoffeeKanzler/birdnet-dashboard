@@ -77,9 +77,15 @@ type FetchSpeciesPhotoOptions = {
   signal?: AbortSignal
 }
 
-const SUMMARY_ENDPOINTS = [
-  'https://de.wikipedia.org/api/rest_v1/page/summary',
-  'https://en.wikipedia.org/api/rest_v1/page/summary',
+const SUMMARY_ENDPOINTS: Array<{ endpoint: string; wikiHost: string }> = [
+  {
+    endpoint: 'https://de.wikipedia.org/api/rest_v1/page/summary',
+    wikiHost: 'de.wikipedia.org',
+  },
+  {
+    endpoint: 'https://en.wikipedia.org/api/rest_v1/page/summary',
+    wikiHost: 'en.wikipedia.org',
+  },
 ]
 const UNKNOWN_SPECIES_VALUES = new Set(['unknown species', 'unbekannte art'])
 const FALLBACK_WIDTH = 640
@@ -273,12 +279,9 @@ const fetchSummaryThumbnail = async (
     return null
   }
 
-  for (const endpoint of SUMMARY_ENDPOINTS) {
-    const wikiHost = endpoint.includes('de.wikipedia.org')
-      ? 'de.wikipedia.org'
-      : 'en.wikipedia.org'
+  for (const sourceConfig of SUMMARY_ENDPOINTS) {
     const response = await fetch(
-      `${endpoint}/${encodeURIComponent(title)}`,
+      `${sourceConfig.endpoint}/${encodeURIComponent(title)}`,
       {
         signal,
         headers: {
@@ -308,7 +311,11 @@ const fetchSummaryThumbnail = async (
       data.content_urls?.mobile?.page ??
       ''
 
-    const imageTitleFromPage = await resolveImageTitle(wikiHost, title, signal)
+    const imageTitleFromPage = await resolveImageTitle(
+      sourceConfig.wikiHost,
+      title,
+      signal,
+    )
     const imageTitleFromThumbnail = toCommonsFileTitleFromThumbnailUrl(source)
     const imageTitle = imageTitleFromPage ?? imageTitleFromThumbnail
     const attribution = imageTitle
