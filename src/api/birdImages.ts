@@ -75,6 +75,7 @@ type FetchSpeciesPhotoOptions = {
   commonName?: string
   scientificName?: string
   signal?: AbortSignal
+  forceRetry?: boolean
 }
 
 const SUMMARY_ENDPOINTS: Array<{ endpoint: string; wikiHost: string }> = [
@@ -90,12 +91,46 @@ const SUMMARY_ENDPOINTS: Array<{ endpoint: string; wikiHost: string }> = [
 const UNKNOWN_SPECIES_VALUES = new Set(['unknown species', 'unbekannte art'])
 const FALLBACK_WIDTH = 640
 const FALLBACK_HEIGHT = 426
-const MISSING_PHOTO_RETRY_MS = 30 * 60 * 1000
+const MISSING_PHOTO_RETRY_MS = 30 * 1000
+const MAX_PHOTO_CACHE_ENTRIES = 600
+const MAX_ATTRIBUTION_ENTRIES = 600
+const MAX_MISSING_RETRY_ENTRIES = 600
 
 const photoCache = new Map<string, SpeciesPhoto | null>()
 const inflightRequests = new Map<string, Promise<SpeciesPhoto | null>>()
 const attributionRegistry = new Map<string, PhotoAttributionRecord>()
 const missingPhotoRetryAt = new Map<string, number>()
+
+const pruneMap = <T>(map: Map<string, T>, maxEntries: number) => {
+  while (map.size > maxEntries) {
+    const oldestKey = map.keys().next().value
+    if (typeof oldestKey !== 'string') {
+      break
+    }
+
+    map.delete(oldestKey)
+  }
+}
+
+const setPhotoCacheEntry = (cacheKey: string, value: SpeciesPhoto | null) => {
+  photoCache.set(cacheKey, value)
+
+  while (photoCache.size > MAX_PHOTO_CACHE_ENTRIES) {
+    const oldestKey = photoCache.keys().next().value
+    if (typeof oldestKey !== 'string') {
+      break
+    }
+
+    photoCache.delete(oldestKey)
+    missingPhotoRetryAt.delete(oldestKey)
+    attributionRegistry.delete(oldestKey)
+  }
+}
+
+const setMissingRetryAt = (cacheKey: string, retryAt: number) => {
+  missingPhotoRetryAt.set(cacheKey, retryAt)
+  pruneMap(missingPhotoRetryAt, MAX_MISSING_RETRY_ENTRIES)
+}
 
 const emitAttributionUpdate = () => {
   if (typeof window !== 'undefined') {
@@ -119,6 +154,7 @@ const upsertAttributionRecord = (
   record: PhotoAttributionRecord,
 ) => {
   attributionRegistry.set(cacheKey, record)
+  pruneMap(attributionRegistry, MAX_ATTRIBUTION_ENTRIES)
   emitAttributionUpdate()
 }
 
@@ -346,6 +382,7 @@ export const fetchSpeciesPhoto = async ({
   commonName,
   scientificName,
   signal,
+  forceRetry = false,
 }: FetchSpeciesPhotoOptions): Promise<SpeciesPhoto | null> => {
   if (signal?.aborted) {
     return null
@@ -361,12 +398,14 @@ export const fetchSpeciesPhoto = async ({
   const cacheKey = buildCacheKey(normalizedCommon, normalizedScientific)
   const cached = photoCache.get(cacheKey)
   if (cached !== undefined && cached !== null) {
+    // Refresh map order for hot entries.
+    setPhotoCacheEntry(cacheKey, cached)
     return cached
   }
 
   if (cached === null) {
     const retryAt = missingPhotoRetryAt.get(cacheKey) ?? 0
-    if (Date.now() < retryAt) {
+    if (!forceRetry && Date.now() < retryAt) {
       return null
     }
   }
@@ -396,7 +435,7 @@ export const fetchSpeciesPhoto = async ({
     for (const name of namesToTry) {
       const photo = await fetchSummaryThumbnail(name, signal)
       if (photo) {
-        photoCache.set(cacheKey, photo)
+        setPhotoCacheEntry(cacheKey, photo)
         missingPhotoRetryAt.delete(cacheKey)
         upsertAttributionRecord(cacheKey, {
           commonName: normalizedCommon || 'Unbekannte Art',
@@ -413,8 +452,8 @@ export const fetchSpeciesPhoto = async ({
       }
     }
 
-    photoCache.set(cacheKey, null)
-    missingPhotoRetryAt.set(cacheKey, Date.now() + MISSING_PHOTO_RETRY_MS)
+    setPhotoCacheEntry(cacheKey, null)
+    setMissingRetryAt(cacheKey, Date.now() + MISSING_PHOTO_RETRY_MS)
     upsertAttributionRecord(cacheKey, {
       commonName: normalizedCommon || 'Unbekannte Art',
       scientificName: normalizedScientific || 'Unbekannte Art',
@@ -424,8 +463,12 @@ export const fetchSpeciesPhoto = async ({
     return null
   })()
     .catch((error) => {
-      photoCache.set(cacheKey, null)
-      missingPhotoRetryAt.set(cacheKey, Date.now() + MISSING_PHOTO_RETRY_MS)
+      if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        throw error
+      }
+
+      setPhotoCacheEntry(cacheKey, null)
+      setMissingRetryAt(cacheKey, Date.now() + MISSING_PHOTO_RETRY_MS)
       throw error
     })
     .finally(() => {
