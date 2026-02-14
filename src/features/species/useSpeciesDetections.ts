@@ -4,6 +4,7 @@ import {
   type Detection,
   fetchSpeciesDetectionsPage,
 } from '../../api/birdnet'
+import { reportFrontendError } from '../../observability/errorReporter'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseSpeciesDetectionsState = {
@@ -109,6 +110,14 @@ export const useSpeciesDetections = (
         if (controller.signal.aborted || requestId !== requestIdRef.current) {
           return
         }
+
+        reportFrontendError({
+          source: 'useSpeciesDetections.loadBatch',
+          error: err,
+          metadata: {
+            scientificName,
+          },
+        })
 
         setError(
           toUserErrorMessage(

@@ -5,6 +5,7 @@ import {
   fetchDetectionsPage,
   fetchDetectionsRangePage,
 } from '../../api/birdnet'
+import { reportFrontendError } from '../../observability/errorReporter'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseArchiveDetectionsState = {
@@ -178,6 +179,14 @@ export const useArchiveDetections = (
       if (controller.signal.aborted || requestId !== requestIdRef.current) {
         return
       }
+
+      reportFrontendError({
+        source: 'useArchiveDetections.refresh',
+        error: err,
+        metadata: {
+          mode: options.queryMode ?? 'range',
+        },
+      })
 
       setError(
         toUserErrorMessage(

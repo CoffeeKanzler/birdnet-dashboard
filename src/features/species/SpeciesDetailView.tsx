@@ -7,6 +7,7 @@ import {
 } from '../../api/birdnet'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
+import { reportFrontendError } from '../../observability/errorReporter'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
@@ -427,6 +428,15 @@ const SpeciesDetailView = ({
       if (requestId !== familyRequestIdRef.current) {
         return
       }
+
+      reportFrontendError({
+        source: 'SpeciesDetailView.loadFamilyMatches',
+        error,
+        metadata: {
+          scientificName,
+          family: speciesInfo?.familyCommon ?? '',
+        },
+      })
 
       setFamilyError(
         toUserErrorMessage(
