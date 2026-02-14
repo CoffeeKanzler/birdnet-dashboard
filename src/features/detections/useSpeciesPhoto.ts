@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { fetchSpeciesPhoto, type SpeciesPhoto } from '../../api/birdImages'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 
 const RETRY_START_MS = 30 * 1000
 
@@ -72,9 +73,7 @@ export const useSpeciesPhoto = (
 
         setPhoto(null)
         setError(
-          err instanceof Error
-            ? err.message
-            : 'Artenfoto konnte nicht geladen werden',
+          toUserErrorMessage(err, 'Artenfoto konnte nicht geladen werden', 'Wikimedia'),
         )
       })
       .finally(() => {

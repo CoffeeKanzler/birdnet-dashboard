@@ -7,6 +7,7 @@ import {
 } from '../../api/birdnet'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
 
@@ -428,9 +429,11 @@ const SpeciesDetailView = ({
       }
 
       setFamilyError(
-        error instanceof Error
-          ? error.message
-          : 'Arten dieser Familie konnten nicht geladen werden.',
+        toUserErrorMessage(
+          error,
+          'Arten dieser Familie konnten nicht geladen werden.',
+          'BirdNET',
+        ),
       )
     } finally {
       if (requestId === familyRequestIdRef.current) {

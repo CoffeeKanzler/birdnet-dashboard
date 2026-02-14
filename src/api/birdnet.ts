@@ -137,32 +137,6 @@ const toDetection = (record: DetectionApiRecord): Detection => {
   }
 }
 
-const toBirdnetError = (error: unknown): Error => {
-  if (error instanceof ApiClientError) {
-    if (error.code === 'http' && typeof error.status === 'number') {
-      return new Error(`BirdNET-Anfrage fehlgeschlagen: ${error.status}`)
-    }
-
-    if (error.code === 'timeout') {
-      return new Error('BirdNET-Anfrage Zeitlimit erreicht')
-    }
-
-    if (error.code === 'aborted') {
-      const abortError = new Error('Anfrage abgebrochen')
-      abortError.name = 'AbortError'
-      return abortError
-    }
-
-    return new Error('BirdNET-Anfrage fehlgeschlagen')
-  }
-
-  if (error instanceof Error) {
-    return error
-  }
-
-  return new Error('BirdNET-Anfrage fehlgeschlagen')
-}
-
 export const fetchDetectionsPage = async ({
   limit = 100,
   offset = 0,
@@ -173,26 +147,14 @@ export const fetchDetectionsPage = async ({
     offset: String(offset),
   })
 
-  let data:
+  const data = await requestJson<
     | DetectionApiRecord[]
     | {
         data?: DetectionApiRecord[]
         detections?: DetectionApiRecord[]
         items?: DetectionApiRecord[]
       }
-
-  try {
-    data = await requestJson<
-      | DetectionApiRecord[]
-      | {
-          data?: DetectionApiRecord[]
-          detections?: DetectionApiRecord[]
-          items?: DetectionApiRecord[]
-        }
-    >(buildApiUrl('/api/v2/detections', params), { signal })
-  } catch (error) {
-    throw toBirdnetError(error)
-  }
+  >(buildApiUrl('/api/v2/detections', params), { signal })
 
   const records = Array.isArray(data)
     ? data
@@ -217,16 +179,10 @@ export const fetchDetectionsRangePage = async ({
     offset: String(offset),
   })
 
-  let data: PaginatedDetectionsResponse | DetectionApiRecord[]
-
-  try {
-    data = await requestJson<PaginatedDetectionsResponse | DetectionApiRecord[]>(
-      buildApiUrl('/api/v2/detections', params),
-      { signal },
-    )
-  } catch (error) {
-    throw toBirdnetError(error)
-  }
+  const data = await requestJson<PaginatedDetectionsResponse | DetectionApiRecord[]>(
+    buildApiUrl('/api/v2/detections', params),
+    { signal },
+  )
 
   const records = Array.isArray(data)
     ? data
@@ -250,16 +206,10 @@ export const fetchRecentDetections = async ({
     limit: String(limit),
   })
 
-  let data: DetectionApiRecord[]
-
-  try {
-    data = await requestJson<DetectionApiRecord[]>(
-      buildApiUrl('/api/v2/detections/recent', params),
-      { signal },
-    )
-  } catch (error) {
-    throw toBirdnetError(error)
-  }
+  const data = await requestJson<DetectionApiRecord[]>(
+    buildApiUrl('/api/v2/detections/recent', params),
+    { signal },
+  )
 
   return data.map(toDetection).sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp))
 }
@@ -326,16 +276,10 @@ export const fetchSpeciesDetectionsPage = async ({
     offset: String(offset),
   })
 
-  let data: PaginatedDetectionsResponse | DetectionApiRecord[]
-
-  try {
-    data = await requestJson<PaginatedDetectionsResponse | DetectionApiRecord[]>(
-      buildApiUrl('/api/v2/detections', params),
-      { signal },
-    )
-  } catch (error) {
-    throw toBirdnetError(error)
-  }
+  const data = await requestJson<PaginatedDetectionsResponse | DetectionApiRecord[]>(
+    buildApiUrl('/api/v2/detections', params),
+    { signal },
+  )
 
   const records = Array.isArray(data)
     ? data
@@ -377,7 +321,13 @@ export const fetchSpeciesInfo = async ({
       return null
     }
 
-    throw toBirdnetError(error)
+    if (error instanceof ApiClientError && error.code === 'aborted') {
+      const abortError = new Error('Anfrage abgebrochen')
+      abortError.name = 'AbortError'
+      throw abortError
+    }
+
+    throw error
   }
 
   return {

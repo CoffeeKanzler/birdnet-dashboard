@@ -4,6 +4,7 @@ import {
   type Detection,
   fetchSpeciesDetectionsPage,
 } from '../../api/birdnet'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseSpeciesDetectionsState = {
   detections: Detection[]
@@ -110,9 +111,11 @@ export const useSpeciesDetections = (
         }
 
         setError(
-          err instanceof Error
-            ? err.message
-            : 'Art-Erkennungen konnten nicht geladen werden.',
+          toUserErrorMessage(
+            err,
+            'Art-Erkennungen konnten nicht geladen werden.',
+            'BirdNET',
+          ),
         )
       } finally {
         if (!controller.signal.aborted && requestId === requestIdRef.current) {
