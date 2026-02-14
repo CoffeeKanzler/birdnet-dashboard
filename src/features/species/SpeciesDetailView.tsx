@@ -25,6 +25,29 @@ type FamilyMatch = {
 
 const familyLookupCache = new Map<string, FamilyMatch[]>()
 const speciesInfoCache = new Map<string, SpeciesInfo | null>()
+const MAX_FAMILY_LOOKUP_CACHE = 200
+const MAX_SPECIES_INFO_CACHE = 800
+
+function pruneCacheMap<T>(map: Map<string, T>, maxEntries: number) {
+  while (map.size > maxEntries) {
+    const oldestKey = map.keys().next().value
+    if (typeof oldestKey !== 'string') {
+      break
+    }
+
+    map.delete(oldestKey)
+  }
+}
+
+const setSpeciesInfoCache = (key: string, value: SpeciesInfo | null) => {
+  speciesInfoCache.set(key, value)
+  pruneCacheMap(speciesInfoCache, MAX_SPECIES_INFO_CACHE)
+}
+
+const setFamilyLookupCache = (key: string, value: FamilyMatch[]) => {
+  familyLookupCache.set(key, value)
+  pruneCacheMap(familyLookupCache, MAX_FAMILY_LOOKUP_CACHE)
+}
 
 const normalize = (value: string) => value.trim().toLowerCase()
 const FALLBACK_WIDTH = 640
@@ -232,7 +255,7 @@ const SpeciesDetailView = ({
           batch.map(async (entry) => {
             const scientificKey = entry.scientificName.trim().toLowerCase()
             const info = await fetchSpeciesInfo({ scientificName: entry.scientificName })
-            speciesInfoCache.set(scientificKey, info)
+            setSpeciesInfoCache(scientificKey, info)
 
             if (requestId !== familyRequestIdRef.current) {
               return
@@ -360,7 +383,7 @@ const SpeciesDetailView = ({
           batch.map(async (entry) => {
             const scientificKey = entry.scientificName.trim().toLowerCase()
             const info = await fetchSpeciesInfo({ scientificName: entry.scientificName })
-            speciesInfoCache.set(scientificKey, info)
+            setSpeciesInfoCache(scientificKey, info)
 
             if (requestId !== familyRequestIdRef.current) {
               return
@@ -397,7 +420,7 @@ const SpeciesDetailView = ({
         .sort((a, b) => a.commonName.localeCompare(b.commonName, 'de'))
         .slice(0, MAX_FAMILY_MATCHES)
 
-      familyLookupCache.set(familyKey, matches)
+      setFamilyLookupCache(familyKey, matches)
       setFamilyMatches(matches)
     } catch (error) {
       if (requestId !== familyRequestIdRef.current) {
