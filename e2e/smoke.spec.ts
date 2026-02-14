@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
 
+const isoForTodayAt = (hour: number, minute = 0): string => {
+  const now = new Date()
+  const value = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0)
+  return value.toISOString()
+}
+
 test('app shell loads', async ({ page }) => {
   await page.goto('/?view=landing')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -33,21 +39,21 @@ test('today view renders grouped detections and can filter species', async ({ pa
             id: '1',
             common_name: 'Amsel',
             scientific_name: 'Turdus merula',
-            timestamp: '2026-02-14T08:15:00Z',
+            timestamp: isoForTodayAt(8, 15),
             confidence: 0.95,
           },
           {
             id: '2',
             common_name: 'Amsel',
             scientific_name: 'Turdus merula',
-            timestamp: '2026-02-14T09:20:00Z',
+            timestamp: isoForTodayAt(9, 20),
             confidence: 0.91,
           },
           {
             id: '3',
             common_name: 'Rotkehlchen',
             scientific_name: 'Erithacus rubecula',
-            timestamp: '2026-02-14T09:45:00Z',
+            timestamp: isoForTodayAt(9, 45),
             confidence: 0.88,
           },
         ],
@@ -55,7 +61,7 @@ test('today view renders grouped detections and can filter species', async ({ pa
     })
   })
 
-  await page.route('**://*.wikipedia.org/**', async (route) => {
+  await page.route(/https?:\/\/(de|en)\.wikipedia\.org\/.*/, async (route) => {
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
@@ -66,14 +72,14 @@ test('today view renders grouped detections and can filter species', async ({ pa
   await page.goto('/?view=today')
 
   await expect(page.getByText('Erkennungen gesamt').first()).toBeVisible()
-  await expect(page.getByText('3').first()).toBeVisible()
   await expect(page.getByText('Top-Art').first()).toBeVisible()
   await expect(page.getByText('Amsel').first()).toBeVisible()
+  await expect(page.getByText('2 Erkennungen').first()).toBeVisible()
 
   await page.getByPlaceholder('Artnamen eingeben').fill('Rot')
   await expect(page.getByText('Filter: Rot').first()).toBeVisible()
-  await expect(page.getByText('1').first()).toBeVisible()
   await expect(page.getByText('Rotkehlchen').first()).toBeVisible()
+  await expect(page.getByText('1 Erkennung').first()).toBeVisible()
 })
 
 test('archive view can render grouped species from date-range query', async ({ page }) => {
@@ -110,7 +116,7 @@ test('archive view can render grouped species from date-range query', async ({ p
     })
   })
 
-  await page.route('**://*.wikipedia.org/**', async (route) => {
+  await page.route(/https?:\/\/(de|en)\.wikipedia\.org\/.*/, async (route) => {
     await route.fulfill({
       status: 404,
       contentType: 'application/json',
@@ -122,9 +128,11 @@ test('archive view can render grouped species from date-range query', async ({ p
 
   await expect(page.getByRole('heading', { name: 'Archiv-Erkennungen' })).toBeVisible()
   await expect(page.getByText('Erkennungen gesamt').first()).toBeVisible()
+  await expect(page.getByText('Top-Art').first()).toBeVisible()
   await expect(page.getByText('Kohlmeise').first()).toBeVisible()
 
   await page.getByPlaceholder('Artnamen eingeben').fill('Blaumeise')
   await expect(page.getByText('Filter: Blaumeise')).toBeVisible()
   await expect(page.getByText('Blaumeise').first()).toBeVisible()
+  await expect(page.getByText('1 Erkennung').first()).toBeVisible()
 })
