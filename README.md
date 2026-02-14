@@ -9,6 +9,7 @@ and Wikimedia-based image attribution data.
 - UI guidelines: `UI_GUIDELINES.md`
 - Security policy: `SECURITY.md`
 - Technical review and roadmap: `technicalreview.md`
+- Architecture and operations docs: `docs/README.md`
 
 ## Features
 
@@ -93,7 +94,7 @@ The image serves static assets via NGINX and proxies allowed API paths defined i
 
 - E2E smoke tests are not yet in place.
 - Router migration (from manual URL state to dedicated router) is still planned.
-- Additional observability and runbook docs are still planned.
+- Additional observability instrumentation is still planned.
 
 ## Troubleshooting
 
