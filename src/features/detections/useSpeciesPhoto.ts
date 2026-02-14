@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { fetchSpeciesPhoto, type SpeciesPhoto } from '../../api/birdImages'
+import { reportFrontendError } from '../../observability/errorReporter'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 
 const RETRY_START_MS = 30 * 1000
@@ -70,6 +71,16 @@ export const useSpeciesPhoto = (
         if (controller.signal.aborted || requestId !== requestIdRef.current) {
           return
         }
+
+        reportFrontendError({
+          source: 'useSpeciesPhoto.fetch',
+          error: err,
+          metadata: {
+            commonName: commonName?.trim() ?? '',
+            scientificName: scientificName?.trim() ?? '',
+            retryTick,
+          },
+        })
 
         setPhoto(null)
         setError(
