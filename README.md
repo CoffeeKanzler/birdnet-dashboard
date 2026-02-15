@@ -10,6 +10,7 @@ and Wikimedia-based image attribution data.
 - Security policy: `SECURITY.md`
 - Technical review and roadmap: `technicalreview.md`
 - Architecture and operations docs: `docs/README.md`
+- Testing best practices: `docs/testing-best-practices.md`
 
 ## Features
 
@@ -61,8 +62,9 @@ Default dev server: `http://localhost:5173`
 
 ```bash
 npm run lint
-npm run test
+npm run test:coverage
 npm run build
+npm run test:e2e
 ```
 
 ## NPM scripts
@@ -70,6 +72,7 @@ npm run build
 - `npm run dev` - start Vite dev server
 - `npm run lint` - run ESLint
 - `npm run test` - run Vitest once
+- `npm run test:coverage` - run Vitest with coverage thresholds
 - `npm run test:watch` - run Vitest in watch mode
 - `npm run build` - type-check and create production bundle
 - `npm run preview` - preview production build locally
@@ -95,7 +98,6 @@ The image serves static assets via NGINX and proxies allowed API paths defined i
 
 ## Known gaps
 
-- E2E smoke tests are not yet in place.
 - Router migration (from manual URL state to dedicated router) is still planned.
 - Additional observability instrumentation is still planned.
 

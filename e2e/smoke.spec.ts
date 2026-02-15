@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test'
 
+import { installBirdnetApiMocks } from './support/mockBirdnet'
+
 test('app shell loads', async ({ page }) => {
+  await installBirdnetApiMocks(page)
   await page.goto('/?view=landing')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 })
