@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { getPhotoAttributionRecords } from './api/birdImages'
 import DetectionsView from './features/detections/DetectionsView'
@@ -96,7 +96,7 @@ const App = () => {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
   const [isHeaderCondensed, setIsHeaderCondensed] = useState(false)
   const [isAttributionOpen, setIsAttributionOpen] = useState(false)
-  const [attributionVersion, setAttributionVersion] = useState(0)
+  const [, setAttributionVersion] = useState(0)
 
   const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
     const nextUrl = createRoute(state)
@@ -109,14 +109,9 @@ const App = () => {
   }
 
   useEffect(() => {
-    updateHistory(
-      {
-        view,
-        lastMainView,
-        selectedSpecies,
-      },
-      'replace',
-    )
+    const initialRoute = parseRouteState()
+    const nextUrl = createRoute(initialRoute)
+    window.history.replaceState(null, '', nextUrl)
   }, [])
 
   useEffect(() => {
@@ -130,9 +125,7 @@ const App = () => {
     }
   }, [])
 
-  const attributionRecords = useMemo(() => {
-    return getPhotoAttributionRecords()
-  }, [attributionVersion])
+  const attributionRecords = getPhotoAttributionRecords()
 
   useEffect(() => {
     const root = document.documentElement
