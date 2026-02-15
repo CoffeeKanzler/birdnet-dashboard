@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PhotoAttributionRecord } from './api/birdImages'
 import App from './App'
+import { renderWithQuery } from './test/renderWithQuery'
 
 const mocks = vi.hoisted(() => {
   return {
@@ -117,7 +118,7 @@ describe('App navigation and URL state', () => {
   })
 
   it('navigates between main views and keeps URL view param in sync', () => {
-    render(<App />)
+    renderWithQuery(<App />)
 
     expect(screen.getByText('Landing View')).toBeInTheDocument()
     expect(window.location.search).toBe('?view=landing')
@@ -146,7 +147,7 @@ describe('App navigation and URL state', () => {
       '/?view=species&from=archive&common=Barn%20Owl&scientific=Tyto%20alba',
     )
 
-    render(<App />)
+    renderWithQuery(<App />)
 
     expect(screen.getByText('Species Detail: Barn Owl (Tyto alba)')).toBeInTheDocument()
 
@@ -157,7 +158,7 @@ describe('App navigation and URL state', () => {
   })
 
   it('handles species selection from non-main view and popstate updates', async () => {
-    render(<App />)
+    renderWithQuery(<App />)
 
     Object.defineProperty(window, 'scrollY', {
       configurable: true,
@@ -196,7 +197,7 @@ describe('App navigation and URL state', () => {
     mocks.getPhotoAttributionRecords.mockImplementation(() => records)
     window.localStorage.setItem('birdnet-showoff-theme', 'dark')
 
-    render(<App />)
+    renderWithQuery(<App />)
 
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     fireEvent.click(screen.getByRole('button', { name: 'Helles Design aktivieren' }))
