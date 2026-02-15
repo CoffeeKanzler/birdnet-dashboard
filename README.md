@@ -1,34 +1,111 @@
-# React + TypeScript + Vite
+# BirdNET Dashboard
 
-## Project Docs
+BirdNET Dashboard is a React + TypeScript frontend for browsing BirdNET-Go detections.
+It provides live highlights, day and archive views, species detail pages, rarity spotlights,
+and Wikimedia-based image attribution data.
+
+## Project docs
 
 - UI guidelines: `UI_GUIDELINES.md`
+- Security policy: `SECURITY.md`
+- Technical review and roadmap: `technicalreview.md`
+- Architecture and operations docs: `docs/README.md`
+- Testing best practices: `docs/testing-best-practices.md`
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Features
 
-Currently, two official plugins are available:
+- Live landing page with highlighted recent detections
+- Today and archive detection views with pagination-aware data loading
+- Species detail view with family-level related species enrichment
+- Rarity spotlight view and notable species matching
+- Wikimedia/Wikipedia photo loading with attribution modal
+- Dark/light theme toggle and URL-driven navigation state
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech stack
 
-## Expanding the ESLint configuration
+- Vite + React 18 + TypeScript
+- Tailwind CSS 4
+- ESLint for linting
+- Vitest + Testing Library for unit/integration tests
+- Docker multi-stage build (Node 24 + NGINX)
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Prerequisites
 
-- Configure the top-level `parserOptions` property like this:
+- Node.js 24
+- npm 11+
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+You can use `.nvmrc`:
+
+```bash
+nvm use
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+## Local development
+
+```bash
+npm ci
+npm run dev
+```
+
+Default dev server: `http://localhost:5173`
+
+## Environment variables
+
+- `VITE_BIRDNET_API_BASE_URL` (optional)
+  - Example: `http://localhost:8080`
+  - If unset, frontend uses relative `/api/v2/...` paths.
+- `VITE_APP_VERSION` (optional)
+  - Example: `v1.2.3`
+  - Included in frontend error telemetry records.
+
+## Quality checks
+
+```bash
+npm run lint
+npm run test:coverage
+npm run build
+npm run test:e2e
+```
+
+## NPM scripts
+
+- `npm run dev` - start Vite dev server
+- `npm run lint` - run ESLint
+- `npm run test` - run Vitest once
+- `npm run test:coverage` - run Vitest with coverage thresholds
+- `npm run test:watch` - run Vitest in watch mode
+- `npm run build` - type-check and create production bundle
+- `npm run preview` - preview production build locally
+
+## Architecture overview
+
+- `src/api/` - API client, BirdNET data API, image/attribution API
+- `src/features/` - feature modules (`detections`, `landing`, `rarity`, `species`)
+- `src/data/` - curated species metadata and descriptions
+- `src/App.tsx` - shell, top-level view routing, attribution modal
+- `docker/` - NGINX runtime config for containerized deployment
+
+## Deployment
+
+Build container image:
+
+```bash
+docker build -t birdnet-dashboard .
+```
+
+The image serves static assets via NGINX and proxies allowed API paths defined in
+`docker/nginx.conf`.
+
+## Known gaps
+
+- Router migration (from manual URL state to dedicated router) is still planned.
+- Additional observability instrumentation is still planned.
+
+## Troubleshooting
+
+- `npm run test` fails in older Node versions:
+  - Ensure `node -v` reports Node 24.
+- API calls fail in dev:
+  - Verify `VITE_BIRDNET_API_BASE_URL` and backend reachability.
+- Missing species images:
+  - Wikimedia lookups can be incomplete; retry is automatic with backoff.

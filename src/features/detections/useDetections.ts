@@ -6,6 +6,8 @@ import {
   fetchDetectionsPage,
   fetchRecentDetections,
 } from '../../api/birdnet'
+import { reportFrontendError } from '../../observability/errorReporter'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 import { captureScrollTop, restoreScrollTop } from '../../utils/scroll'
 
 type UseDetectionsOptions = {
@@ -75,9 +77,15 @@ export const useDetections = (
         return
       }
 
-      setError(
-        err instanceof Error ? err.message : 'Erkennungen konnten nicht geladen werden',
-      )
+      reportFrontendError({
+        source: 'useDetections.refresh',
+        error: err,
+        metadata: {
+          mode: options.recentOnly ? 'recent' : options.pageOnly ? 'page' : 'today',
+        },
+      })
+
+      setError(toUserErrorMessage(err, 'Erkennungen konnten nicht geladen werden', 'BirdNET'))
     } finally {
       if (requestId === requestIdRef.current && !controller.signal.aborted) {
         setIsLoading(false)

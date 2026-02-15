@@ -1,3 +1,5 @@
+import { ApiClientError, buildApiUrl, requestJson } from './apiClient'
+
 export type SpeciesPhoto = {
   url: string
   width: number
@@ -216,16 +218,17 @@ const resolveImageTitle = async (
     titles: title,
   })
 
-  const response = await fetch(`https://${wikiHost}/w/api.php?${params.toString()}`, {
-    signal,
-    headers: { accept: 'application/json' },
-  })
+  let data: PageImageApiResponse
 
-  if (!response.ok) {
+  try {
+    data = await requestJson<PageImageApiResponse>(
+      buildApiUrl(`https://${wikiHost}/w/api.php`, params),
+      { signal },
+    )
+  } catch {
     return null
   }
 
-  const data = (await response.json()) as PageImageApiResponse
   const pages = data.query?.pages
   if (!pages) {
     return null
@@ -261,19 +264,17 @@ const resolveAttribution = async (
     titles: imageTitle,
   })
 
-  const response = await fetch(
-    `https://commons.wikimedia.org/w/api.php?${params.toString()}`,
-    {
-      signal,
-      headers: { accept: 'application/json' },
-    },
-  )
+  let data: ImageInfoApiResponse
 
-  if (!response.ok) {
+  try {
+    data = await requestJson<ImageInfoApiResponse>(
+      buildApiUrl('https://commons.wikimedia.org/w/api.php', params),
+      { signal },
+    )
+  } catch {
     return { sourceUrl: fallbackSourceUrl }
   }
 
-  const data = (await response.json()) as ImageInfoApiResponse
   const pages = data.query?.pages
   if (!pages) {
     return { sourceUrl: fallbackSourceUrl }
@@ -318,25 +319,25 @@ const fetchSummaryThumbnail = async (
   }
 
   for (const sourceConfig of SUMMARY_ENDPOINTS) {
-    const response = await fetch(
-      `${sourceConfig.endpoint}/${encodeURIComponent(title)}`,
-      {
-        signal,
-        headers: {
-          accept: 'application/json',
-        },
-      },
-    )
+    let data: WikipediaSummaryResponse
 
-    if (!response.ok) {
-      if (response.status === 404) {
+    try {
+      data = await requestJson<WikipediaSummaryResponse>(
+        buildApiUrl(`${sourceConfig.endpoint}/${encodeURIComponent(title)}`),
+        { signal },
+      )
+    } catch (error) {
+      if (error instanceof ApiClientError && error.status === 404) {
         continue
       }
 
-      throw new Error(`Wikipedia-Anfrage fehlgeschlagen: ${response.status}`)
+      if (error instanceof ApiClientError && error.code === 'http' && error.status) {
+        throw new Error(`Wikipedia-Anfrage fehlgeschlagen: ${error.status}`)
+      }
+
+      throw new Error('Wikipedia-Anfrage fehlgeschlagen')
     }
 
-    const data = (await response.json()) as WikipediaSummaryResponse
     const thumbnail = data.thumbnail
     const source = thumbnail?.source
 
