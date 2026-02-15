@@ -1,4 +1,5 @@
-import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
 
 import {
   type Detection,
@@ -6,12 +7,10 @@ import {
   fetchDetectionsPage,
   fetchRecentDetections,
 } from '../../api/birdnet'
-import { reportFrontendError } from '../../observability/errorReporter'
+import { queryKeys } from '../../api/queryKeys'
 import { toUserErrorMessage } from '../../utils/errorMessages'
-import { captureScrollTop, restoreScrollTop } from '../../utils/scroll'
 
 type UseDetectionsOptions = {
-  scrollContainerRef?: RefObject<HTMLElement | null>
   refreshIntervalMs?: number
   limit?: number
   pageOnly?: boolean
@@ -29,98 +28,54 @@ type UseDetectionsState = {
 export const useDetections = (
   options: UseDetectionsOptions = {},
 ): UseDetectionsState => {
-  const [detections, setDetections] = useState<Detection[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const requestIdRef = useRef(0)
+  const queryKey = useMemo(() => {
+    if (options.recentOnly) {
+      return queryKeys.detections.recent(options.limit)
+    }
+    if (options.pageOnly) {
+      return queryKeys.detections.page(options.limit)
+    }
+    return queryKeys.detections.today(options.limit)
+  }, [options.limit, options.pageOnly, options.recentOnly])
+
+  const fetchFn = useCallback(
+    async (signal: AbortSignal): Promise<Detection[]> => {
+      if (options.recentOnly) {
+        return fetchRecentDetections({ limit: options.limit, signal })
+      }
+      if (options.pageOnly) {
+        return fetchDetectionsPage({ limit: options.limit, signal })
+      }
+      return fetchDetections({ limit: options.limit, signal })
+    },
+    [options.limit, options.pageOnly, options.recentOnly],
+  )
+
+  const { data, isLoading, error, dataUpdatedAt, refetch } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => fetchFn(signal),
+    refetchInterval: options.refreshIntervalMs ?? 60_000,
+    meta: {
+      source: 'useDetections.refresh',
+      mode: options.recentOnly ? 'recent' : options.pageOnly ? 'page' : 'today',
+    },
+  })
 
   const refresh = useCallback(async () => {
-    const scrollTarget = options.scrollContainerRef?.current ?? null
-    const scrollTop = captureScrollTop(scrollTarget)
-
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-    const requestId = requestIdRef.current + 1
-    requestIdRef.current = requestId
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const data = options.recentOnly
-        ? await fetchRecentDetections({
-            limit: options.limit,
-            signal: controller.signal,
-          })
-        : options.pageOnly
-          ? await fetchDetectionsPage({
-            limit: options.limit,
-            signal: controller.signal,
-          })
-          : await fetchDetections({
-              limit: options.limit,
-              signal: controller.signal,
-            })
-
-      if (requestId !== requestIdRef.current) {
-        return
-      }
-
-      setDetections(data)
-      setLastUpdated(new Date())
-      restoreScrollTop(scrollTarget, scrollTop)
-    } catch (err) {
-      if (controller.signal.aborted || requestId !== requestIdRef.current) {
-        return
-      }
-
-      reportFrontendError({
-        source: 'useDetections.refresh',
-        error: err,
-        metadata: {
-          mode: options.recentOnly ? 'recent' : options.pageOnly ? 'page' : 'today',
-        },
-      })
-
-      setError(toUserErrorMessage(err, 'Erkennungen konnten nicht geladen werden', 'BirdNET'))
-    } finally {
-      if (requestId === requestIdRef.current && !controller.signal.aborted) {
-        setIsLoading(false)
-      }
-    }
-  }, [options.limit, options.pageOnly, options.recentOnly, options.scrollContainerRef])
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  useEffect(() => {
-    const refreshInterval = options.refreshIntervalMs ?? 60000
-
-    if (refreshInterval <= 0) {
-      return () => {
-        abortRef.current?.abort()
-      }
-    }
-
-    const interval = window.setInterval(() => {
-      void refresh()
-    }, refreshInterval)
-
-    return () => {
-      window.clearInterval(interval)
-      abortRef.current?.abort()
-    }
-  }, [options.refreshIntervalMs, refresh])
+    await refetch()
+  }, [refetch])
 
   return {
-    detections,
+    detections: data ?? [],
     isLoading,
-    error,
-    lastUpdated,
+    error: error
+      ? toUserErrorMessage(
+          error,
+          'Erkennungen konnten nicht geladen werden',
+          'BirdNET',
+        )
+      : null,
+    lastUpdated: dataUpdatedAt ? new Date(dataUpdatedAt) : null,
     refresh,
   }
 }

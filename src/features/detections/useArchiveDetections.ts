@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 
 import {
   type Detection,
   fetchDetectionsPage,
   fetchDetectionsRangePage,
 } from '../../api/birdnet'
-import { reportFrontendError } from '../../observability/errorReporter'
+import { queryKeys } from '../../api/queryKeys'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseArchiveDetectionsState = {
@@ -34,52 +35,39 @@ export const useArchiveDetections = (
   rangeEnd: Date,
   options: UseArchiveDetectionsOptions = {},
 ): UseArchiveDetectionsState => {
-  const [detections, setDetections] = useState<Detection[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const requestIdRef = useRef(0)
+  const queryClient = useQueryClient()
 
-  const refresh = useCallback(async () => {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-    const requestId = requestIdRef.current + 1
-    requestIdRef.current = requestId
+  const startTime = rangeStart.valueOf()
+  const endTime = rangeEnd.valueOf()
+  const validRange = !Number.isNaN(startTime) && !Number.isNaN(endTime)
+  const startDate = validRange ? rangeStart.toISOString().slice(0, 10) : ''
+  const endDate = validRange
+    ? new Date(endTime - 1).toISOString().slice(0, 10)
+    : ''
+  const mode = options.queryMode ?? 'range'
 
-    setIsLoading(true)
-    setError(null)
-    setDetections([])
+  const queryKey = queryKeys.detections.range(startDate, endDate, mode)
 
-    const startTime = rangeStart.valueOf()
-    const endTime = rangeEnd.valueOf()
-
-    if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
-      setDetections([])
-      setIsLoading(false)
-      return
-    }
-
-    try {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey,
+    queryFn: async ({ signal }) => {
       const collected: Detection[] = []
       let offset = 0
-      const startDate = rangeStart.toISOString().slice(0, 10)
-      const endDate = new Date(endTime - 1).toISOString().slice(0, 10)
       const seenPageSignatures = new Set<string>()
       const seenDetectionKeys = new Set<string>()
       const matchedLookupKeys = new Set<string>()
       let pageCount = 0
 
       while (pageCount < MAX_RANGE_PAGES) {
+        signal.throwIfAborted()
 
-        const mode = options.queryMode ?? 'range'
         const page =
           mode === 'global'
             ? {
                 detections: await fetchDetectionsPage({
                   limit: PAGE_LIMIT,
                   offset,
-                  signal: controller.signal,
+                  signal,
                 }),
                 total: Number.MAX_SAFE_INTEGER,
               }
@@ -88,12 +76,8 @@ export const useArchiveDetections = (
                 endDate,
                 limit: PAGE_LIMIT,
                 offset,
-                signal: controller.signal,
+                signal,
               })
-
-        if (requestId !== requestIdRef.current) {
-          return
-        }
 
         if (page.detections.length === 0) {
           break
@@ -148,7 +132,7 @@ export const useArchiveDetections = (
         pageCount += 1
 
         if (newItemsInPage > 0) {
-          setDetections([...collected])
+          queryClient.setQueryData(queryKey, [...collected])
         }
 
         if (
@@ -174,54 +158,32 @@ export const useArchiveDetections = (
         offset += PAGE_LIMIT
       }
 
-      setDetections(collected)
-    } catch (err) {
-      if (controller.signal.aborted || requestId !== requestIdRef.current) {
-        return
-      }
+      return collected
+    },
+    enabled: validRange,
+    staleTime: 0,
+    gcTime: 2 * 60_000,
+    retry: false,
+    meta: {
+      source: 'useArchiveDetections.refresh',
+      mode,
+    },
+  })
 
-      reportFrontendError({
-        source: 'useArchiveDetections.refresh',
-        error: err,
-        metadata: {
-          mode: options.queryMode ?? 'range',
-        },
-      })
-
-      setError(
-        toUserErrorMessage(
-          err,
-          'Archiv-Erkennungen konnten nicht geladen werden',
-          'BirdNET',
-        ),
-      )
-    } finally {
-      if (requestId === requestIdRef.current && !controller.signal.aborted) {
-        setIsLoading(false)
-      }
-    }
-  }, [
-    options.earlyStopLookupKeys,
-    options.earlyStopTarget,
-    options.queryMode,
-    rangeEnd,
-    rangeStart,
-  ])
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort()
-    }
-  }, [])
+  const refresh = useCallback(async () => {
+    await refetch()
+  }, [refetch])
 
   return {
-    detections,
+    detections: data ?? [],
     isLoading,
-    error,
+    error: error
+      ? toUserErrorMessage(
+          error,
+          'Archiv-Erkennungen konnten nicht geladen werden',
+          'BirdNET',
+        )
+      : null,
     refresh,
   }
 }

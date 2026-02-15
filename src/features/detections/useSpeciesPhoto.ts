@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { fetchSpeciesPhoto, type SpeciesPhoto } from '../../api/birdImages'
-import { reportFrontendError } from '../../observability/errorReporter'
+import { queryKeys } from '../../api/queryKeys'
 import { toUserErrorMessage } from '../../utils/errorMessages'
-
-const RETRY_START_MS = 30 * 1000
 
 type UseSpeciesPhotoState = {
   photo: SpeciesPhoto | null
@@ -16,91 +14,34 @@ export const useSpeciesPhoto = (
   commonName?: string,
   scientificName?: string,
 ): UseSpeciesPhotoState => {
-  const [photo, setPhoto] = useState<SpeciesPhoto | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [retryTick, setRetryTick] = useState(0)
-  const requestIdRef = useRef(0)
-  const retryAttemptRef = useRef(0)
+  const trimmedCommon = commonName?.trim() ?? ''
+  const trimmedScientific = scientificName?.trim() ?? ''
+  const hasName = Boolean(trimmedCommon || trimmedScientific)
 
-  useEffect(() => {
-    retryAttemptRef.current = 0
-  }, [commonName, scientificName])
-
-  useEffect(() => {
-    const hasName = Boolean(commonName?.trim() || scientificName?.trim())
-    if (!hasName || photo || isLoading) {
-      return
-    }
-
-    const attempt = retryAttemptRef.current
-    const interval = RETRY_START_MS * 2 ** attempt
-
-    const timer = window.setTimeout(() => {
-      retryAttemptRef.current = attempt + 1
-      setRetryTick((value) => value + 1)
-    }, interval)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [commonName, scientificName, isLoading, photo, retryTick])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    const requestId = requestIdRef.current + 1
-    requestIdRef.current = requestId
-
-    setIsLoading(true)
-    setError(null)
-
-    fetchSpeciesPhoto({
-      commonName,
-      scientificName,
-      signal: controller.signal,
-      forceRetry: retryTick > 0,
-    })
-      .then((data) => {
-        if (controller.signal.aborted || requestId !== requestIdRef.current) {
-          return
-        }
-
-        setPhoto(data)
-      })
-      .catch((err) => {
-        if (controller.signal.aborted || requestId !== requestIdRef.current) {
-          return
-        }
-
-        reportFrontendError({
-          source: 'useSpeciesPhoto.fetch',
-          error: err,
-          metadata: {
-            commonName: commonName?.trim() ?? '',
-            scientificName: scientificName?.trim() ?? '',
-            retryTick,
-          },
-        })
-
-        setPhoto(null)
-        setError(
-          toUserErrorMessage(err, 'Artenfoto konnte nicht geladen werden', 'Wikimedia'),
-        )
-      })
-      .finally(() => {
-        if (!controller.signal.aborted && requestId === requestIdRef.current) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [commonName, scientificName, retryTick])
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.speciesPhoto(trimmedCommon, trimmedScientific),
+    queryFn: ({ signal }) =>
+      fetchSpeciesPhoto({ commonName, scientificName, signal }),
+    enabled: hasName,
+    retry: 3,
+    retryDelay: (attempt) => 30_000 * 2 ** attempt,
+    staleTime: 5 * 60_000,
+    meta: {
+      source: 'useSpeciesPhoto.fetch',
+      commonName: trimmedCommon,
+      scientificName: trimmedScientific,
+    },
+  })
 
   return {
-    photo,
+    photo: data ?? null,
     isLoading,
-    error,
+    error: error
+      ? toUserErrorMessage(
+          error,
+          'Artenfoto konnte nicht geladen werden',
+          'Wikimedia',
+        )
+      : null,
   }
 }
