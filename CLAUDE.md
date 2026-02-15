@@ -231,7 +231,8 @@ Nginx (`docker/nginx.conf`) enforces:
 |---|---|
 | `UI_GUIDELINES.md` | UI/UX design system (typography, colors, accessibility, interaction rules) |
 | `technicalreview.md` | Technical review with status tracking and phased roadmap |
-| `docs/rfc/routing-migration.md` | RFC for React Router migration |
+| `docs/rfc/routing-migration.md` | RFC for React Router migration (Phase 3) |
+| `docs/rfc/query-layer-migration.md` | RFC for TanStack Query migration (Phase 2) |
 | `docs/runbook.md` | Operational troubleshooting guide |
 | `docs/testing-best-practices.md` | Testing strategy and patterns |
 | `docs/adr/0001-testing-strategy-and-coverage.md` | ADR on coverage thresholds |

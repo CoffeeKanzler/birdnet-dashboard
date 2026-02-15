@@ -78,7 +78,7 @@ Die App ist funktional und produktionsnah deploybar (**Lint + Build laufen gruen
 ### Agent-Tasks
 - [x] **P1:** Architektur-RFC erstellt (`docs/rfc/routing-migration.md`).
 - [x] **P1:** API-Client eingefuehrt (`src/api/apiClient.ts`) inkl. Timeout/Retry/Fehlerklassifikation.
-- [ ] **P2:** Hooks auf gemeinsames Query-Layer migrieren (inkrementell pro Feature).
+- [ ] **P2:** Hooks auf gemeinsames Query-Layer migrieren (inkrementell pro Feature). RFC: `docs/rfc/query-layer-migration.md`.
 
 ---
 
