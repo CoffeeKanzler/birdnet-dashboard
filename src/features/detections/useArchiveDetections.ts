@@ -5,6 +5,8 @@ import {
   fetchDetectionsPage,
   fetchDetectionsRangePage,
 } from '../../api/birdnet'
+import { reportFrontendError } from '../../observability/errorReporter'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseArchiveDetectionsState = {
   detections: Detection[]
@@ -68,10 +70,7 @@ export const useArchiveDetections = (
       const matchedLookupKeys = new Set<string>()
       let pageCount = 0
 
-      while (true) {
-        if (pageCount >= MAX_RANGE_PAGES) {
-          break
-        }
+      while (pageCount < MAX_RANGE_PAGES) {
 
         const mode = options.queryMode ?? 'range'
         const page =
@@ -181,10 +180,20 @@ export const useArchiveDetections = (
         return
       }
 
+      reportFrontendError({
+        source: 'useArchiveDetections.refresh',
+        error: err,
+        metadata: {
+          mode: options.queryMode ?? 'range',
+        },
+      })
+
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Archiv-Erkennungen konnten nicht geladen werden',
+        toUserErrorMessage(
+          err,
+          'Archiv-Erkennungen konnten nicht geladen werden',
+          'BirdNET',
+        ),
       )
     } finally {
       if (requestId === requestIdRef.current && !controller.signal.aborted) {

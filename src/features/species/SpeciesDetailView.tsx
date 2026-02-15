@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   fetchDetectionsPage,
@@ -7,6 +7,8 @@ import {
 } from '../../api/birdnet'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
+import { reportFrontendError } from '../../observability/errorReporter'
+import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
 
@@ -147,7 +149,7 @@ const SpeciesDetailView = ({
     }
   }, [scientificName])
 
-  const loadFamilyMatches = async () => {
+  const loadFamilyMatches = useCallback(async () => {
     if (!speciesInfo?.familyCommon) {
       return
     }
@@ -427,17 +429,28 @@ const SpeciesDetailView = ({
         return
       }
 
+      reportFrontendError({
+        source: 'SpeciesDetailView.loadFamilyMatches',
+        error,
+        metadata: {
+          scientificName,
+          family: speciesInfo?.familyCommon ?? '',
+        },
+      })
+
       setFamilyError(
-        error instanceof Error
-          ? error.message
-          : 'Arten dieser Familie konnten nicht geladen werden.',
+        toUserErrorMessage(
+          error,
+          'Arten dieser Familie konnten nicht geladen werden.',
+          'BirdNET',
+        ),
       )
     } finally {
       if (requestId === familyRequestIdRef.current) {
         setIsFamilyLoading(false)
       }
     }
-  }
+  }, [scientificName, speciesInfo?.familyCommon])
 
   useEffect(() => {
     if (!speciesInfo?.familyCommon) {
@@ -446,7 +459,7 @@ const SpeciesDetailView = ({
     }
 
     void loadFamilyMatches()
-  }, [speciesInfo?.familyCommon])
+  }, [loadFamilyMatches, speciesInfo?.familyCommon])
 
   const description = useMemo(() => {
     const normalizedCommonName = normalize(commonName)
