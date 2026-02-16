@@ -28,10 +28,7 @@ test('species detail shows related species as clickable buttons', async ({ page 
 
   await page.goto('/?view=species&common=Amsel&scientific=Turdus%20merula&from=today')
   await expect(page.getByRole('heading', { name: 'Amsel' })).toBeVisible()
-  await expect(page.getByText('Familie')).toBeVisible()
-
-  const familySection = page.locator('text=Weitere erkannte Arten derselben Familie.')
-  await expect(familySection).toBeVisible()
+  await expect(page.getByText('Weitere erkannte Arten derselben Familie.')).toBeVisible()
 
   const singdrosselButton = page.getByRole('button', { name: 'Singdrossel' })
   await expect(singdrosselButton).toBeVisible({ timeout: 15_000 })

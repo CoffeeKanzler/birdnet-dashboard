@@ -35,7 +35,12 @@ test('archive view shows error and retries successfully', async ({ page }) => {
 
   await page.route('**/api/v2/detections**', async (route) => {
     requestCount += 1
-    if (requestCount <= 1) {
+    // apiClient retries 503 once internally (2 attempts per query invocation).
+    // The archive view fires two separate queries: one on initial load (today's
+    // range) and one when "Letzte 7 Tage" is clicked (new range = new query key).
+    // Each query uses 2 requests (1 + apiClient retry). Total: 4 failing requests
+    // before the error stays visible for the 7-day range query.
+    if (requestCount <= 4) {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',
