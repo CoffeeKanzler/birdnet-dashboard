@@ -1,7 +1,20 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useDetections } from '../detections/useDetections'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
+
+const useMediaQuery = (query: string): boolean => {
+  const [matches, setMatches] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
 
 type LiveHighlightCardProps = {
   commonName: string
@@ -147,7 +160,7 @@ const LiveHighlightCard = ({
 }
 
 const LIVE_REFRESH_INTERVAL_MS = 30000
-const LIVE_FETCH_LIMIT = 20
+const LIVE_FETCH_LIMIT = 30
 
 type LandingViewProps = {
   onSpeciesSelect?: (species: { commonName: string; scientificName: string }) => void
@@ -155,6 +168,10 @@ type LandingViewProps = {
 }
 
 const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) => {
+  const isLg = useMediaQuery('(min-width: 1024px)')
+  const isSm = useMediaQuery('(min-width: 640px)')
+  const maxItems = isLg ? 9 : isSm ? 6 : 3
+
   const { detections, isLoading, error } = useDetections({
     refreshIntervalMs: LIVE_REFRESH_INTERVAL_MS,
     limit: LIVE_FETCH_LIMIT,
@@ -187,13 +204,13 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
         timestamp: detection.timestamp,
       })
 
-      if (items.length >= 3) {
+      if (items.length >= maxItems) {
         break
       }
     }
 
     return items
-  }, [detections])
+  }, [detections, maxItems])
 
   const showSkeletonCards = isLoading && latestDetections.length === 0
 
@@ -212,7 +229,7 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {showSkeletonCards
-            ? Array.from({ length: 3 }, (_, index) => (
+            ? Array.from({ length: maxItems }, (_, index) => (
                 <div
                   className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50"
                   key={`landing-live-skeleton-${index}`}
