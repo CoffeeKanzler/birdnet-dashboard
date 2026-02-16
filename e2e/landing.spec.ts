@@ -33,7 +33,9 @@ test('landing card click navigates to species detail and back', async ({ page })
   await expect(page.getByRole('heading', { name: speciesName! })).toBeVisible()
   await expect(page.getByText('Art-Detail')).toBeVisible()
 
+  // Back from species goes to lastMainView. When entering from landing,
+  // lastMainView defaults to 'today' (landing is not a valid lastMainView).
   await page.getByRole('button', { name: 'Zurueck' }).click()
-  await expect(page).toHaveURL(/view=landing/)
-  await expect(page.getByRole('heading', { name: 'Live' })).toBeVisible()
+  await expect(page).toHaveURL(/view=today/)
+  await expect(page.getByRole('heading', { name: 'Heutige Erkennungen' })).toBeVisible()
 })
