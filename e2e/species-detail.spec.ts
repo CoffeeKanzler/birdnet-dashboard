@@ -34,7 +34,7 @@ test('species detail shows related species as clickable buttons', async ({ page 
   await expect(singdrosselButton).toBeVisible({ timeout: 15_000 })
 
   await singdrosselButton.click()
-  await expect(page).toHaveURL(/view=species.*Turdus%20philomelos/)
+  await expect(page).toHaveURL(/view=species.*Turdus.philomelos/)
   await expect(page.getByRole('heading', { name: 'Singdrossel' })).toBeVisible()
 })
 

@@ -69,11 +69,12 @@ test('archive view shows error and retries successfully', async ({ page }) => {
   await page.goto('/?view=archive')
   await page.getByRole('button', { name: 'Letzte 7 Tage' }).click()
 
+  // Wait up to 15s: 4 failing requests × (300ms apiClient retry delay) + processing time
   await expect(
     page
       .getByText(/BirdNET ist momentan nicht verfuegbar/)
       .first(),
-  ).toBeVisible()
+  ).toBeVisible({ timeout: 15_000 })
 
   const retryButton = page.getByRole('button', { name: 'Erneut versuchen' })
   await expect(retryButton).toBeVisible()
