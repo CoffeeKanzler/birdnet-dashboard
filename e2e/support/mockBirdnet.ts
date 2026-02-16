@@ -162,13 +162,6 @@ export const installBirdnetApiMocks = async (page: Page): Promise<void> => {
     await fulfillJson(route, { query: { pages: {} } })
   })
 
-  await page.route('**/api/v2/detections/recent**', async (route) => {
-    const requestUrl = new URL(route.request().url())
-    const limit = Number(requestUrl.searchParams.get('limit') ?? '100')
-    const payload = paginate(detections, limit, 0)
-    await fulfillJson(route, payload)
-  })
-
   await page.route('**/api/v2/species**', async (route) => {
     const requestUrl = new URL(route.request().url())
     const scientificName = normalize(requestUrl.searchParams.get('scientific_name') ?? '')
@@ -194,6 +187,9 @@ export const installBirdnetApiMocks = async (page: Page): Promise<void> => {
     })
   })
 
+  // Register generic detections route BEFORE the more specific recent route.
+  // Playwright matches routes in reverse registration order (last wins),
+  // so the recent route must come after to take precedence over the generic one.
   await page.route('**/api/v2/detections**', async (route) => {
     const requestUrl = new URL(route.request().url())
     const limit = Number(requestUrl.searchParams.get('numResults') ?? '100')
@@ -225,5 +221,14 @@ export const installBirdnetApiMocks = async (page: Page): Promise<void> => {
       data: pageItems,
       total: filtered.length,
     })
+  })
+
+  // Recent detections route — registered last so it takes precedence
+  // over the generic detections route above for /api/v2/detections/recent URLs.
+  await page.route('**/api/v2/detections/recent**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const limit = Number(requestUrl.searchParams.get('limit') ?? '100')
+    const payload = paginate(detections, limit, 0)
+    await fulfillJson(route, payload)
   })
 }
