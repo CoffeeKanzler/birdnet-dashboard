@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
 
 import {
   type Detection,
   fetchSpeciesDetectionsPage,
 } from '../../api/birdnet'
-import { reportFrontendError } from '../../observability/errorReporter'
+import { queryKeys } from '../../api/queryKeys'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 
 type UseSpeciesDetectionsState = {
@@ -54,111 +55,55 @@ export const useSpeciesDetections = (
   commonName: string,
   scientificName: string,
 ): UseSpeciesDetectionsState => {
-  const [detections, setDetections] = useState<Detection[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingMore] = useState(false)
-  const [hasMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const requestIdRef = useRef(0)
-
   const normalizedCommonName = normalize(commonName)
   const normalizedScientificName = normalize(scientificName)
+  const hasName = Boolean(normalizedCommonName || normalizedScientificName)
 
-  const loadBatch = useCallback(
-    async (replace: boolean) => {
-      abortRef.current?.abort()
-      const controller = new AbortController()
-      abortRef.current = controller
-      const requestId = requestIdRef.current + 1
-      requestIdRef.current = requestId
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.detections.species(scientificName),
+    queryFn: async ({ signal }) => {
+      const page = await fetchSpeciesDetectionsPage({
+        scientificName,
+        limit: SPECIES_BATCH_SIZE,
+        offset: 0,
+        signal,
+      })
 
-      if (!normalizedCommonName && !normalizedScientificName) {
-        setDetections([])
-        setIsLoading(false)
-        return
-      }
-
-      if (replace) {
-        setIsLoading(true)
-      }
-
-      setError(null)
-
-      try {
-        const page = await fetchSpeciesDetectionsPage({
-          scientificName,
-          limit: SPECIES_BATCH_SIZE,
-          offset: 0,
-          signal: controller.signal,
-        })
-
-        if (controller.signal.aborted || requestId !== requestIdRef.current) {
-          return
-        }
-
-        const batch = page.detections.filter((detection) => {
-          return matchesSelectedSpecies(
-            detection,
-            normalizedCommonName,
-            normalizedScientificName,
-          )
-        })
-
-        setDetections(batch)
-      } catch (err) {
-        if (controller.signal.aborted || requestId !== requestIdRef.current) {
-          return
-        }
-
-        reportFrontendError({
-          source: 'useSpeciesDetections.loadBatch',
-          error: err,
-          metadata: {
-            scientificName,
-          },
-        })
-
-        setError(
-          toUserErrorMessage(
-            err,
-            'Art-Erkennungen konnten nicht geladen werden.',
-            'BirdNET',
-          ),
-        )
-      } finally {
-        if (!controller.signal.aborted && requestId === requestIdRef.current) {
-          setIsLoading(false)
-        }
-      }
+      return page.detections.filter((detection) =>
+        matchesSelectedSpecies(
+          detection,
+          normalizedCommonName,
+          normalizedScientificName,
+        ),
+      )
     },
-    [normalizedCommonName, normalizedScientificName, scientificName],
-  )
+    enabled: hasName,
+    meta: {
+      source: 'useSpeciesDetections.loadBatch',
+      scientificName,
+    },
+  })
 
   const refresh = useCallback(async () => {
-    await loadBatch(true)
-  }, [loadBatch])
+    await refetch()
+  }, [refetch])
 
   const loadMore = useCallback(async () => {
     return
   }, [])
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort()
-    }
-  }, [])
-
   return {
-    detections,
+    detections: data ?? [],
     isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
+    isLoadingMore: false,
+    hasMore: false,
+    error: error
+      ? toUserErrorMessage(
+          error,
+          'Art-Erkennungen konnten nicht geladen werden.',
+          'BirdNET',
+        )
+      : null,
     refresh,
     loadMore,
   }

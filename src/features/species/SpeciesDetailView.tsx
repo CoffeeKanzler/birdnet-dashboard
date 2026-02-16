@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -5,9 +6,9 @@ import {
   fetchSpeciesInfo,
   type SpeciesInfo,
 } from '../../api/birdnet'
+import { queryKeys } from '../../api/queryKeys'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
-import { reportFrontendError } from '../../observability/errorReporter'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
@@ -23,32 +24,6 @@ type SpeciesDetailViewProps = {
 type FamilyMatch = {
   commonName: string
   scientificName: string
-}
-
-const familyLookupCache = new Map<string, FamilyMatch[]>()
-const speciesInfoCache = new Map<string, SpeciesInfo | null>()
-const MAX_FAMILY_LOOKUP_CACHE = 200
-const MAX_SPECIES_INFO_CACHE = 800
-
-function pruneCacheMap<T>(map: Map<string, T>, maxEntries: number) {
-  while (map.size > maxEntries) {
-    const oldestKey = map.keys().next().value
-    if (typeof oldestKey !== 'string') {
-      break
-    }
-
-    map.delete(oldestKey)
-  }
-}
-
-const setSpeciesInfoCache = (key: string, value: SpeciesInfo | null) => {
-  speciesInfoCache.set(key, value)
-  pruneCacheMap(speciesInfoCache, MAX_SPECIES_INFO_CACHE)
-}
-
-const setFamilyLookupCache = (key: string, value: FamilyMatch[]) => {
-  familyLookupCache.set(key, value)
-  pruneCacheMap(familyLookupCache, MAX_FAMILY_LOOKUP_CACHE)
 }
 
 const normalize = (value: string) => value.trim().toLowerCase()
@@ -114,40 +89,27 @@ const SpeciesDetailView = ({
   onAttributionOpen,
   onSpeciesSelect,
 }: SpeciesDetailViewProps) => {
+  const queryClient = useQueryClient()
   const { detections, isLoading, error, refresh } = useSpeciesDetections(
     commonName,
     scientificName,
   )
   const { photo, isLoading: isPhotoLoading } = useSpeciesPhoto(commonName, scientificName)
-  const [speciesInfo, setSpeciesInfo] = useState<SpeciesInfo | null>(null)
+
+  const { data: speciesInfo } = useQuery({
+    queryKey: queryKeys.speciesInfo(scientificName),
+    queryFn: async ({ signal }) => {
+      const info = await fetchSpeciesInfo({ scientificName, signal })
+      return info
+    },
+    staleTime: 10 * 60_000,
+    meta: { source: 'SpeciesDetailView.speciesInfo' },
+  })
+
   const [familyMatches, setFamilyMatches] = useState<FamilyMatch[] | null>(null)
   const [isFamilyLoading, setIsFamilyLoading] = useState(false)
   const [familyError, setFamilyError] = useState<string | null>(null)
   const familyRequestIdRef = useRef(0)
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    void (async () => {
-      try {
-        const info = await fetchSpeciesInfo({
-          scientificName,
-          signal: controller.signal,
-        })
-        if (!controller.signal.aborted) {
-          setSpeciesInfo(info)
-        }
-      } catch {
-        if (!controller.signal.aborted) {
-          setSpeciesInfo(null)
-        }
-      }
-    })()
-
-    return () => {
-      controller.abort()
-    }
-  }, [scientificName])
 
   const loadFamilyMatches = useCallback(async () => {
     if (!speciesInfo?.familyCommon) {
@@ -158,7 +120,7 @@ const SpeciesDetailView = ({
     familyRequestIdRef.current = requestId
 
     const familyKey = speciesInfo.familyCommon.trim().toLowerCase()
-    const cached = familyLookupCache.get(familyKey)
+    const cached = queryClient.getQueryData<FamilyMatch[]>(queryKeys.familyMatches(familyKey))
     if (cached) {
       setFamilyMatches(cached)
     }
@@ -228,7 +190,9 @@ const SpeciesDetailView = ({
       for (const entry of candidateList) {
         const scientificKey = entry.scientificName.trim().toLowerCase()
 
-        const cachedInfo = speciesInfoCache.get(scientificKey)
+        const cachedInfo = queryClient.getQueryData<SpeciesInfo | null>(
+          queryKeys.speciesInfo(entry.scientificName),
+        )
         if (cachedInfo === undefined) {
           unresolved.push(entry)
           continue
@@ -257,7 +221,7 @@ const SpeciesDetailView = ({
           batch.map(async (entry) => {
             const scientificKey = entry.scientificName.trim().toLowerCase()
             const info = await fetchSpeciesInfo({ scientificName: entry.scientificName })
-            setSpeciesInfoCache(scientificKey, info)
+            queryClient.setQueryData(queryKeys.speciesInfo(entry.scientificName), info)
 
             if (requestId !== familyRequestIdRef.current) {
               return
@@ -352,7 +316,9 @@ const SpeciesDetailView = ({
           continue
         }
 
-        const cachedInfo = speciesInfoCache.get(scientificKey)
+        const cachedInfo = queryClient.getQueryData<SpeciesInfo | null>(
+          queryKeys.speciesInfo(entry.scientificName),
+        )
         if (cachedInfo === undefined) {
           backgroundUnresolved.push(entry)
           continue
@@ -385,7 +351,7 @@ const SpeciesDetailView = ({
           batch.map(async (entry) => {
             const scientificKey = entry.scientificName.trim().toLowerCase()
             const info = await fetchSpeciesInfo({ scientificName: entry.scientificName })
-            setSpeciesInfoCache(scientificKey, info)
+            queryClient.setQueryData(queryKeys.speciesInfo(entry.scientificName), info)
 
             if (requestId !== familyRequestIdRef.current) {
               return
@@ -422,25 +388,16 @@ const SpeciesDetailView = ({
         .sort((a, b) => a.commonName.localeCompare(b.commonName, 'de'))
         .slice(0, MAX_FAMILY_MATCHES)
 
-      setFamilyLookupCache(familyKey, matches)
+      queryClient.setQueryData(queryKeys.familyMatches(familyKey), matches)
       setFamilyMatches(matches)
-    } catch (error) {
+    } catch (caughtError) {
       if (requestId !== familyRequestIdRef.current) {
         return
       }
 
-      reportFrontendError({
-        source: 'SpeciesDetailView.loadFamilyMatches',
-        error,
-        metadata: {
-          scientificName,
-          family: speciesInfo?.familyCommon ?? '',
-        },
-      })
-
       setFamilyError(
         toUserErrorMessage(
-          error,
+          caughtError,
           'Arten dieser Familie konnten nicht geladen werden.',
           'BirdNET',
         ),
@@ -450,7 +407,7 @@ const SpeciesDetailView = ({
         setIsFamilyLoading(false)
       }
     }
-  }, [scientificName, speciesInfo?.familyCommon])
+  }, [queryClient, scientificName, speciesInfo?.familyCommon])
 
   useEffect(() => {
     if (!speciesInfo?.familyCommon) {

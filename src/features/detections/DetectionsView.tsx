@@ -23,9 +23,7 @@ type TodayDetectionsProps = {
 
 const TodayDetections = ({ onSpeciesSelect, onAttributionOpen }: TodayDetectionsProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const { detections, isLoading, error, lastUpdated, refresh } = useDetections({
-    scrollContainerRef,
-  })
+  const { detections, isLoading, error, lastUpdated, refresh } = useDetections()
 
   return (
     <TodayView
