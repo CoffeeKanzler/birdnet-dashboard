@@ -25,7 +25,9 @@ test('attribution modal opens and closes from footer', async ({ page }) => {
   await page.getByRole('button', { name: 'Bildnachweise' }).click()
 
   await expect(page.getByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeVisible()
-  await expect(page.getByText('Noch keine Bildnachweise geladen.')).toBeVisible()
+  // Landing cards load species photos which populate attribution records —
+  // so either the table or the empty-state text will be shown.
+  await expect(page.getByText(/Diese Liste zeigt aktuell geladene Bilder|Noch keine Bildnachweise geladen/)).toBeVisible()
 
   await page.getByRole('button', { name: /Schlie/ }).click()
   await expect(page.getByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeHidden()
