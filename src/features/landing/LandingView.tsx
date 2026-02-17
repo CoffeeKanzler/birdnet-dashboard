@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useDetections } from '../detections/useDetections'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
+import { t } from '../../i18n'
 
 const useMediaQuery = (query: string): boolean => {
   const [matches, setMatches] = useState(
@@ -44,21 +45,21 @@ const LiveHighlightCard = ({
     const value = parsed.valueOf()
 
     if (Number.isNaN(value)) {
-      return 'Unbekannt'
+      return t('common.unknown')
     }
 
     const ageMinutes = Math.floor((Date.now() - value) / 60000)
 
     if (ageMinutes <= 15) {
-      return 'Live'
+      return t('live.statusLive')
     }
 
     if (ageMinutes < 60) {
-      return `Vor ${ageMinutes} min`
+      return t('live.statusMinutesAgo', { minutes: ageMinutes })
     }
 
     const ageHours = Math.floor(ageMinutes / 60)
-    return `Vor ${ageHours} h`
+    return t('live.statusHoursAgo', { hours: ageHours })
   }, [timestamp])
 
   const handleSelect = () => {
@@ -67,12 +68,12 @@ const LiveHighlightCard = ({
 
   const attributionTitle = photo?.attribution
     ? [
-        photo.attribution.author ? `Urheber: ${photo.attribution.author}` : null,
-        photo.attribution.license ? `Lizenz: ${photo.attribution.license}` : null,
+        photo.attribution.author ? t('attribution.author', { author: photo.attribution.author }) : null,
+        photo.attribution.license ? t('attribution.license', { license: photo.attribution.license }) : null,
       ]
         .filter(Boolean)
-        .join(' · ') || 'Bildnachweis anzeigen'
-    : 'Bildnachweis anzeigen'
+        .join(' · ') || t('attribution.showAttribution')
+    : t('attribution.showAttribution')
 
   return (
     <article
@@ -94,7 +95,7 @@ const LiveHighlightCard = ({
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {photo ? (
           <img
-            alt={`Foto von ${commonName}`}
+            alt={t('attribution.photoOf', { name: commonName })}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             decoding="async"
             height={height}
@@ -125,7 +126,7 @@ const LiveHighlightCard = ({
                 />
               </svg>
               <span className="text-xs font-semibold uppercase tracking-[0.3em]">
-                Kein Bild
+                {t('common.noImage')}
               </span>
             </div>
           </div>
@@ -188,8 +189,8 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
     const seen = new Set<string>()
 
     for (const detection of detections) {
-      const commonName = detection.commonName?.trim() || 'Unbekannte Art'
-      const scientificName = detection.scientificName?.trim() || 'Unbekannte Art'
+      const commonName = detection.commonName?.trim() || t('common.unknownSpecies')
+      const scientificName = detection.scientificName?.trim() || t('common.unknownSpecies')
       const dedupeKey = `${scientificName}||${commonName}`
 
       if (seen.has(dedupeKey)) {
@@ -220,10 +221,10 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Live-Highlights
+              {t('live.sectionLabel')}
             </p>
-            <h2 className="text-xl font-semibold text-slate-900">Live</h2>
-            <p className="mt-1 text-xs text-slate-500">Automatisch alle 30 Sekunden aktualisiert.</p>
+            <h2 className="text-xl font-semibold text-slate-900">{t('live.heading')}</h2>
+            <p className="mt-1 text-xs text-slate-500">{t('live.autoRefresh')}</p>
           </div>
         </header>
 
@@ -252,7 +253,7 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
               : latestDetections.length === 0
                 ? (
                   <div className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
-                    Noch keine aktuellen Arten erkannt.
+                    {t('live.noDetections')}
                   </div>
                 )
                 : latestDetections.map((item) => (

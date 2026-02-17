@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 
+import { siteConfig } from '../../config/site'
+import { t } from '../../i18n'
 import { formatDisplayDate, toDateInputValue } from '../../utils/dateRange'
 import { useArchiveDetections } from '../detections/useArchiveDetections'
 import { notableSpecies } from '../../data/notableSpecies'
@@ -87,7 +89,7 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
   const spotlightList = useMemo(() => notableList.slice(0, 10), [notableList])
 
   const rangeSummary = useMemo(() => {
-    return `${formatDisplayDate(startDate)} bis ${formatDisplayDate(endDate)}`
+    return t('archive.rangeSummary', { start: formatDisplayDate(startDate), end: formatDisplayDate(endDate) })
   }, [startDate, endDate])
 
   return (
@@ -96,13 +98,13 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Zeitraum (fix)
+              {t('rarity.periodLabel')}
             </p>
             <h2 className="text-xl font-semibold text-slate-900">
-              Letzte 30 Tage
+              {t('rarity.periodHeading')}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Der Zeitraum ist für bessere Geschwindigkeit fest auf 30 Tage gesetzt.
+              {t('rarity.periodDescription')}
             </p>
             <p className="mt-2 text-sm font-medium text-slate-700">
               {rangeSummary}
@@ -111,12 +113,12 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
               {isRangeLoading ? (
                 <span className="flex items-center gap-2 font-semibold uppercase tracking-[0.2em] text-slate-400">
                   <span className="h-3 w-3 animate-spin rounded-full border border-slate-300 border-t-slate-500" />
-                  Erkennungen werden geladen
+                  {t('rarity.loadingDetections')}
                 </span>
               ) : rangeError ? (
                 <span className="text-rose-600">{rangeError}</span>
               ) : (
-                <span>{detections.length} Erkennungen im Zeitraum</span>
+                <span>{t('rarity.detectionsInRange', { count: detections.length })}</span>
               )}
               {rangeError ? (
                 <button
@@ -126,12 +128,12 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
                   }}
                   type="button"
                 >
-                  Erneut versuchen
+                  {t('common.retry')}
                 </button>
               ) : null}
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Hinweis: Eine manuelle Zeitraum-Auswahl ist derzeit deaktiviert.
+              {t('rarity.manualRangeNote')}
             </p>
           </div>
         </header>
@@ -140,40 +142,40 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Highlights
+              {t('rarity.highlightsLabel')}
             </p>
             <h2 className="text-xl font-semibold text-slate-900">
-              Top 10 Highlights
+              {t('rarity.highlightsHeading')}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Auffällige Arten im gewählten Zeitraum.
+              {t('rarity.highlightsDescription')}
             </p>
           </div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            {spotlightList.length} Treffer
+            {t('rarity.matchCount', { count: spotlightList.length })}
           </p>
         </header>
 
         <div className="mt-5 space-y-4">
           {rangeError ? (
             <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-              Erkennungen fuer den Zeitraum konnten nicht geladen werden.
+              {t('rarity.rangeError')}
             </div>
           ) : null}
 
           {rangeError ? null : isRangeLoading && detections.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-              Erkennungen im Zeitraum werden geladen...
+              {t('rarity.loadingRange')}
             </div>
           ) : spotlightList.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-              Keine besonderen Arten in diesem Zeitraum gefunden.
+              {t('rarity.noHighlights')}
             </div>
           ) : (
             <div className="space-y-4">
               {isRangeLoading ? (
                 <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
-                  Weitere Erkennungen werden geladen ...
+                  {t('rarity.loadingMore')}
                 </div>
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -182,8 +184,8 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
                     spotlightEntry.species.scientificName ?? 'unknown'
                   }`
                   const lastSeenLabel = spotlightEntry.lastSeenAt
-                    ? spotlightEntry.lastSeenAt.toLocaleDateString('de-DE')
-                    : 'Unbekannt'
+                    ? spotlightEntry.lastSeenAt.toLocaleDateString(siteConfig.dateLocale)
+                    : t('common.unknown')
 
                   return (
                     <div
@@ -206,7 +208,7 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
                         </div>
                       ) : null}
                       <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-500">
-                        <span>Zuletzt gesehen: {lastSeenLabel}</span>
+                        <span>{t('rarity.lastSeen', { date: lastSeenLabel })}</span>
                       </div>
                     </div>
                   )

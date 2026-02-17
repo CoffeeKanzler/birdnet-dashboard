@@ -1,0 +1,530 @@
+{
+  "Turdus merula": {
+    "commonName": "Common Blackbird",
+    "description": "Familiar garden and park bird, celebrated for its rich, flute-like song at dusk."
+  },
+  "Panurus biarmicus": {
+    "commonName": "Bearded Reedling",
+    "description": "Reed-dwelling bird with a long tail; often calls in flocks in wetland reedbeds."
+  },
+  "Fringilla montifringilla": {
+    "commonName": "Brambling",
+    "description": "Winter visitor from the north, often joining mixed finch flocks at feeders.",
+    "notability": "Migration Highlight",
+    "whyNotable": ["Mass arrivals possible", "Seasonal speciality"]
+  },
+  "Anser albifrons": {
+    "commonName": "Greater White-fronted Goose",
+    "description": "Migratory goose with a pale forehead, common on fields and stopover wetlands."
+  },
+  "Fulica atra": {
+    "commonName": "Eurasian Coot",
+    "description": "Dark waterbird with a white frontal shield, very common on ponds and lakes."
+  },
+  "Cyanistes caeruleus": {
+    "commonName": "Eurasian Blue Tit",
+    "description": "Small, lively tit with blue-and-yellow plumage; a regular visitor to gardens."
+  },
+  "Fringilla coelebs": {
+    "commonName": "Common Chaffinch",
+    "description": "Very common songbird with a distinctive call, widespread in forests, parks, and settlements."
+  },
+  "Dendrocopos major": {
+    "commonName": "Great Spotted Woodpecker",
+    "description": "Characteristic woodpecker of broadleaved forests, often conspicuous by drumming and loud calls."
+  },
+  "Corvus monedula": {
+    "commonName": "Western Jackdaw",
+    "description": "Small crow, often in flocks near villages, fields, and open areas."
+  },
+  "Garrulus glandarius": {
+    "commonName": "Eurasian Jay",
+    "description": "Striking woodland bird with a harsh alarm call; caches acorns in autumn."
+  },
+  "Alcedo atthis": {
+    "commonName": "Common Kingfisher",
+    "description": "Vivid blue-orange fisher that favours clear streams with steep, overhanging banks.",
+    "notability": "Local Icon",
+    "whyNotable": ["Rarely seen well", "Beloved species"]
+  },
+  "Pica pica": {
+    "commonName": "Eurasian Magpie",
+    "description": "Black-and-white crow with a long tail; highly intelligent and adaptable."
+  },
+  "Spinus spinus": {
+    "commonName": "Eurasian Siskin",
+    "description": "Small finch appearing in winter flocks at alder trees and garden feeders."
+  },
+  "Alauda arvensis": {
+    "commonName": "Eurasian Skylark",
+    "description": "Open-country bird with a soaring song flight, typical of arable fields and meadows."
+  },
+  "Passer montanus": {
+    "commonName": "Eurasian Tree Sparrow",
+    "description": "Small sparrow with a chestnut cap; common in villages, hedgerows, and field margins."
+  },
+  "Columba livia": {
+    "commonName": "Rock Dove / Feral Pigeon",
+    "description": "Ancestor of the town pigeon, widespread in settlements and on buildings."
+  },
+  "Certhia brachydactyla": {
+    "commonName": "Short-toed Treecreeper",
+    "description": "Inconspicuous climbing bird searching for insects along tree trunks in parks and gardens."
+  },
+  "Motacilla cinerea": {
+    "commonName": "Grey Wagtail",
+    "description": "Slender wagtail with a long tail, favouring fast-flowing streams and riverbanks."
+  },
+  "Pyrrhula pyrrhula": {
+    "commonName": "Eurasian Bullfinch",
+    "description": "Stocky finch with calm demeanour; male has vivid red underparts, frequents woodland edges."
+  },
+  "Emberiza citrinella": {
+    "commonName": "Yellowhammer",
+    "description": "Yellow-tinged bunting of farmland, singing from fences and hedgerows."
+  },
+  "Anser anser": {
+    "commonName": "Greylag Goose",
+    "description": "Large wild goose and ancestor of most domestic geese, common near water and meadows."
+  },
+  "Ardea cinerea": {
+    "commonName": "Grey Heron",
+    "description": "Large heron with a long neck, hunting patiently in shallow water and on meadows."
+  },
+  "Chloris chloris": {
+    "commonName": "European Greenfinch",
+    "description": "Robust finch with a nasal call; frequent at feeders, hedgerows, and woodland edges."
+  },
+  "Picus viridis": {
+    "commonName": "European Green Woodpecker",
+    "description": "Woodpecker of open landscapes, foraging on the ground for ants and giving a loud laughing call.",
+    "notability": "Woodpecker",
+    "whyNotable": ["Distinctive laughing call", "Conspicuous in open areas"]
+  },
+  "Lophophanes cristatus": {
+    "commonName": "European Crested Tit",
+    "description": "Distinctive crested tit found mainly in coniferous forests."
+  },
+  "Phoenicurus ochruros": {
+    "commonName": "Black Redstart",
+    "description": "Insect-eater of urban areas, often perching on roofs and walls with a scratchy song."
+  },
+  "Passer domesticus": {
+    "commonName": "House Sparrow",
+    "description": "Classic village bird in gregarious flocks, closely tied to human habitation."
+  },
+  "Prunella modularis": {
+    "commonName": "Dunnock",
+    "description": "Unobtrusive songbird of dense undergrowth, with a fine, high-pitched song."
+  },
+  "Lullula arborea": {
+    "commonName": "Woodlark",
+    "description": "Rarer lark of dry open areas, with a soft, melodic song flight."
+  },
+  "Cygnus olor": {
+    "commonName": "Mute Swan",
+    "description": "Large swan with an orange bill and black knob, commonly seen on lakes."
+  },
+  "Phasianus colchicus": {
+    "commonName": "Common Pheasant",
+    "description": "Ground-dwelling gamebird of fields and hedgerows; males are strikingly colourful."
+  },
+  "Coccothraustes coccothraustes": {
+    "commonName": "Hawfinch",
+    "description": "Powerful finch with a massive bill capable of cracking hard stones and seeds.",
+    "notability": "Striking Finch",
+    "whyNotable": ["Impressive bill", "Rarely lingers long"]
+  },
+  "Sitta europaea": {
+    "commonName": "Eurasian Nuthatch",
+    "description": "The only native bird that can walk headfirst down a tree trunk."
+  },
+  "Parus major": {
+    "commonName": "Great Tit",
+    "description": "Largest native tit; very common, versatile, and vocally diverse."
+  },
+  "Corvus corax": {
+    "commonName": "Common Raven",
+    "description": "Largest songbird in Europe, with a deep call and impressive soaring flight."
+  },
+  "Phalacrocorax carbo": {
+    "commonName": "Great Cormorant",
+    "description": "Dark fish-hunter, often seen drying its wings spread-eagled after diving."
+  },
+  "Grus grus": {
+    "commonName": "Common Crane",
+    "description": "Migratory bird with a trumpet-like call, often flying in large formations.",
+    "notability": "Migration Highlight",
+    "whyNotable": ["Spectacular migration", "Iconic bugling calls"]
+  },
+  "Anas crecca": {
+    "commonName": "Eurasian Teal",
+    "description": "Small dabbling duck of shallow water, often gathering in flocks in quiet bays."
+  },
+  "Anser brachyrhynchus": {
+    "commonName": "Pink-footed Goose",
+    "description": "Arctic goose, seen in central Europe mainly during migration and winter."
+  },
+  "Buteo buteo": {
+    "commonName": "Common Buzzard",
+    "description": "Most common raptor in the region; soars over fields in search of prey.",
+    "notability": "Raptor",
+    "whyNotable": ["Familiar raptor", "Indicator of open countryside"]
+  },
+  "Turdus viscivorus": {
+    "commonName": "Mistle Thrush",
+    "description": "Large thrush of open woodland, vigorously defending berry-bearing trees in winter."
+  },
+  "Corvus cornix": {
+    "commonName": "Hooded Crow",
+    "description": "Grey-and-black crow, locally common and highly adaptable."
+  },
+  "Alopochen aegyptiaca": {
+    "commonName": "Egyptian Goose",
+    "description": "Introduced goose with distinctive eye patches, often seen on park ponds and riversides."
+  },
+  "Corvus corone": {
+    "commonName": "Carrion Crow",
+    "description": "All-black crow, intelligent and common in both farmland and urban settings."
+  },
+  "Lanius excubitor": {
+    "commonName": "Great Grey Shrike",
+    "description": "Grey shrike observed from elevated perches, hunting from vantage points.",
+    "notability": "Shrike",
+    "whyNotable": ["Raptor attitude in a songbird body", "Winter specialist"]
+  },
+  "Columba palumbus": {
+    "commonName": "Common Wood Pigeon",
+    "description": "Largest native pigeon with a white neck patch, widespread in forests and towns."
+  },
+  "Emberiza schoeniclus": {
+    "commonName": "Common Reed Bunting",
+    "description": "Bunting of reedbeds and wet meadows with characteristic calls."
+  },
+  "Botaurus stellaris": {
+    "commonName": "Eurasian Bittern",
+    "description": "Master of camouflage in reedbeds, often revealed only by its deep booming call.",
+    "notability": "Wetland Highlight",
+    "whyNotable": ["Extremely difficult to see", "Indicator of healthy reedbeds"]
+  },
+  "Turdus iliacus": {
+    "commonName": "Redwing",
+    "description": "Winter visitor with distinctive rusty-red flanks, often in berry-laden shrubs."
+  },
+  "Erithacus rubecula": {
+    "commonName": "European Robin",
+    "description": "Beloved garden bird with an orange-red breast and clear, liquid song phrases."
+  },
+  "Corvus frugilegus": {
+    "commonName": "Rook",
+    "description": "Colonial crow with a pale bill base, common on arable farmland."
+  },
+  "Tyto alba": {
+    "commonName": "Barn Owl",
+    "description": "Pale owl with a heart-shaped facial disc, hunting mainly small rodents.",
+    "notability": "Owl",
+    "whyNotable": ["Highly photogenic", "Rare sighting"]
+  },
+  "Mareca strepera": {
+    "commonName": "Gadwall",
+    "description": "Understated dabbling duck of quiet waters; male has finely patterned grey plumage."
+  },
+  "Aegithalos caudatus": {
+    "commonName": "Long-tailed Tit",
+    "description": "Small, rounded tit with a very long tail; moves in lively, noisy flocks."
+  },
+  "Saxicola rubicola": {
+    "commonName": "European Stonechat",
+    "description": "Small open-country bird perching on prominent points; male has black head and orange breast."
+  },
+  "Dryocopus martius": {
+    "commonName": "Black Woodpecker",
+    "description": "Largest native woodpecker, chiselling conspicuous cavities in old tree trunks.",
+    "notability": "Woodpecker",
+    "whyNotable": ["Powerful call", "Shapes the forest soundscape"]
+  },
+  "Cygnus cygnus": {
+    "commonName": "Whooper Swan",
+    "description": "Northern swan with a yellow-and-black bill, mainly a winter visitor."
+  },
+  "Regulus ignicapilla": {
+    "commonName": "Common Firecrest",
+    "description": "Tiny woodland bird with a vivid crown stripe and very high-pitched calls."
+  },
+  "Sturnus vulgaris": {
+    "commonName": "Common Starling",
+    "description": "Gregarious bird with iridescent plumage and a vast vocal repertoire."
+  },
+  "Athene noctua": {
+    "commonName": "Little Owl",
+    "description": "Small owl of open landscapes, often linked to traditional orchards and pastures.",
+    "notability": "Owl",
+    "whyNotable": ["Cultural landscape specialist", "Local rarity"]
+  },
+  "Carduelis carduelis": {
+    "commonName": "European Goldfinch",
+    "description": "Colourful finch with a red face mask and a tinkling call."
+  },
+  "Anas platyrhynchos": {
+    "commonName": "Mallard",
+    "description": "Most common duck on still and slow-flowing waters."
+  },
+  "Poecile palustris": {
+    "commonName": "Marsh Tit",
+    "description": "Unspectacular tit with a clear call, favouring damp deciduous and mixed woodland."
+  },
+  "Acanthis flammea": {
+    "commonName": "Common Redpoll",
+    "description": "Northern finch appearing as a winter visitor in irruption years in alder and birch stands."
+  },
+  "Periparus ater": {
+    "commonName": "Coal Tit",
+    "description": "Small coniferous-forest tit with a white nape patch and rapid contact calls."
+  },
+  "Gallinula chloropus": {
+    "commonName": "Common Moorhen",
+    "description": "Shy rail relative with a red frontal shield, living in dense waterside vegetation."
+  },
+  "Anser serrirostris": {
+    "commonName": "Tundra Bean Goose",
+    "description": "Passage goose from northern breeding grounds, resting on wet meadows and fields."
+  },
+  "Streptopelia decaocto": {
+    "commonName": "Eurasian Collared Dove",
+    "description": "Pale dove with a black collar, a typical resident of human settlements."
+  },
+  "Falco tinnunculus": {
+    "commonName": "Common Kestrel",
+    "description": "Small falcon with a characteristic hovering flight over meadows and roadsides.",
+    "notability": "Raptor",
+    "whyNotable": ["Classic town and village raptor", "Easy to observe"]
+  },
+  "Turdus pilaris": {
+    "commonName": "Fieldfare",
+    "description": "Thrush of open landscapes, often in large winter flocks."
+  },
+  "Certhia familiaris": {
+    "commonName": "Eurasian Treecreeper",
+    "description": "Bark climber of old forests, probing crevices for insects and spiders."
+  },
+  "Strix aluco": {
+    "commonName": "Tawny Owl",
+    "description": "Typical owl of woodland and urban parks, often detected only by its calls.",
+    "notability": "Owl",
+    "whyNotable": ["Distinctive call", "Lives close to people"]
+  },
+  "Asio otus": {
+    "commonName": "Long-eared Owl",
+    "description": "Well-camouflaged owl with prominent ear tufts.",
+    "notability": "Owl",
+    "whyNotable": ["Winter roost trees", "Inconspicuous and rarely seen"]
+  },
+  "Scolopax rusticola": {
+    "commonName": "Eurasian Woodcock",
+    "description": "Dense-forest species with a long bill; roding display flight especially conspicuous at dusk."
+  },
+  "Tringa ochropus": {
+    "commonName": "Green Sandpiper",
+    "description": "Small wader using pond margins and shallow water on migration and in winter."
+  },
+  "Cinclus cinclus": {
+    "commonName": "White-throated Dipper",
+    "description": "Dark mountain-stream bird that dives and walks underwater while foraging."
+  },
+  "Rallus aquaticus": {
+    "commonName": "Water Rail",
+    "description": "Very secretive rail of reedbed zones, more often heard than seen."
+  },
+  "Poecile montanus": {
+    "commonName": "Willow Tit",
+    "description": "Tit of damp woodland, similar to Marsh Tit but with a slightly different call."
+  },
+  "Branta leucopsis": {
+    "commonName": "Barnacle Goose",
+    "description": "Contrastingly patterned goose, often at coastal and inland roosts in winter."
+  },
+  "Anthus pratensis": {
+    "commonName": "Meadow Pipit",
+    "description": "Open-country bird of damp meadows with a fine song during short song flights."
+  },
+  "Regulus regulus": {
+    "commonName": "Goldcrest",
+    "description": "Smallest native bird, restlessly searching conifers for tiny insects."
+  },
+  "Troglodytes troglodytes": {
+    "commonName": "Eurasian Wren",
+    "description": "Tiny, loud songbird with an upright tail, foraging in dense undergrowth."
+  },
+  "Phylloscopus collybita": {
+    "commonName": "Common Chiffchaff",
+    "description": "Common leaf warbler named after its call, feeding mainly on small insects."
+  },
+  "Haliaeetus albicilla": {
+    "commonName": "White-tailed Eagle",
+    "description": "Largest raptor in Germany, often near water or lakes.",
+    "notability": "Raptor",
+    "whyNotable": ["Impressive wingspan", "Sighting is truly special"]
+  },
+  "Falco peregrinus": {
+    "commonName": "Peregrine Falcon",
+    "description": "Fastest bird in a dive, striking prey with complete surprise.",
+    "notability": "Raptor",
+    "whyNotable": ["Spectacular hunting stoop", "Striking urban nester"]
+  },
+  "Milvus milvus": {
+    "commonName": "Red Kite",
+    "description": "Raptor with a deeply forked tail, often soaring over farmland.",
+    "notability": "Raptor",
+    "whyNotable": ["Germany is a core stronghold", "Distinctive flight silhouette"]
+  },
+  "Milvus migrans": {
+    "commonName": "Black Kite",
+    "description": "Summer visitor, commonly seen near rivers and lakes.",
+    "notability": "Raptor",
+    "whyNotable": ["Passes through in summer", "Rarely close to urban areas"]
+  },
+  "Pandion haliaetus": {
+    "commonName": "Western Osprey",
+    "description": "Specialist fish-hunter, hovering over water before plunging feet-first.",
+    "notability": "Raptor",
+    "whyNotable": ["Rare sighting", "Characteristic hunting plunge"]
+  },
+  "Accipiter gentilis": {
+    "commonName": "Northern Goshawk",
+    "description": "Powerful forest hawk, appearing suddenly at feeding stations.",
+    "notability": "Raptor",
+    "whyNotable": ["Shy and fast", "Rarely seen in the open"]
+  },
+  "Accipiter nisus": {
+    "commonName": "Eurasian Sparrowhawk",
+    "description": "Small, agile raptor hunting through hedgerows and gardens.",
+    "notability": "Raptor",
+    "whyNotable": ["Exciting hunting episodes", "Contrasts with songbirds"]
+  },
+  "Circus cyaneus": {
+    "commonName": "Hen Harrier",
+    "description": "Slender raptor quartering low over fields and heathland.",
+    "notability": "Raptor",
+    "whyNotable": ["Winter visitor", "Elegant hunting flight"]
+  },
+  "Circus aeruginosus": {
+    "commonName": "Western Marsh Harrier",
+    "description": "Reedbed specialist, slowly circling over wetlands.",
+    "notability": "Raptor",
+    "whyNotable": ["Wetland highlight", "Easy to watch at breeding sites"]
+  },
+  "Pernis apivorus": {
+    "commonName": "European Honey Buzzard",
+    "description": "Secretive raptor that feeds mainly on wasp and bee larvae.",
+    "notability": "Raptor",
+    "whyNotable": ["Summer specialist", "Hard to find"]
+  },
+  "Falco subbuteo": {
+    "commonName": "Eurasian Hobby",
+    "description": "Agile small falcon hunting swallows and dragonflies in swift flight.",
+    "notability": "Raptor",
+    "whyNotable": ["Dynamic hunting", "A rare treat to witness"]
+  },
+  "Bubo bubo": {
+    "commonName": "Eurasian Eagle-Owl",
+    "description": "Largest owl in Europe, mostly nocturnal and very secretive.",
+    "notability": "Owl",
+    "whyNotable": ["Rare nocturnal sighting", "Awe-inspiring size"]
+  },
+  "Asio flammeus": {
+    "commonName": "Short-eared Owl",
+    "description": "Diurnal owl that hunts low over open ground.",
+    "notability": "Owl",
+    "whyNotable": ["Active by day", "Rare and nomadic"]
+  },
+  "Ciconia nigra": {
+    "commonName": "Black Stork",
+    "description": "Shy forest stork, considerably rarer than the White Stork.",
+    "notability": "Large Bird",
+    "whyNotable": ["Rare observation", "Forest and wetland specialist"]
+  },
+  "Ciconia ciconia": {
+    "commonName": "White Stork",
+    "description": "Well-known cultural companion, often nesting in villages.",
+    "notability": "Local Icon",
+    "whyNotable": ["Village and town icon", "Symbol species in Germany"]
+  },
+  "Ardea alba": {
+    "commonName": "Great Egret",
+    "description": "Elegant, large heron with pure white plumage.",
+    "notability": "Waterbird",
+    "whyNotable": ["Striking appearance", "Wetland highlight"]
+  },
+  "Platalea leucorodia": {
+    "commonName": "Eurasian Spoonbill",
+    "description": "Distinctive wading bird with a spoon-shaped bill.",
+    "notability": "Waterbird",
+    "whyNotable": ["Unmistakable appearance", "Rare inland"]
+  },
+  "Mergus merganser": {
+    "commonName": "Common Merganser",
+    "description": "Large sawbill with a shaggy crest, hunting fish in clear rivers.",
+    "notability": "Waterbird",
+    "whyNotable": ["Winter visitor", "Striking head plumes"]
+  },
+  "Mergellus albellus": {
+    "commonName": "Smew",
+    "description": "Small sawbill with contrasting plumage, frequent in cold months.",
+    "notability": "Waterbird",
+    "whyNotable": ["Rare and attractive", "Winter highlight"]
+  },
+  "Upupa epops": {
+    "commonName": "Eurasian Hoopoe",
+    "description": "Striking plumage with a prominent crest, calling hoop-hoop.",
+    "notability": "Iconic Species",
+    "whyNotable": ["Highly photogenic", "Seasonal speciality"]
+  },
+  "Merops apiaster": {
+    "commonName": "European Bee-eater",
+    "description": "Brilliantly colourful insect-hunter, often nesting in colonies.",
+    "notability": "Colourful Species",
+    "whyNotable": ["Stunning colours", "Only locally present"]
+  },
+  "Oriolus oriolus": {
+    "commonName": "Eurasian Golden Oriole",
+    "description": "Yellow-and-black forest bird, more often heard than seen.",
+    "notability": "Colourful Species",
+    "whyNotable": ["Rarely visible", "Unmistakable fluting call"]
+  },
+  "Dendrocopos medius": {
+    "commonName": "Middle Spotted Woodpecker",
+    "description": "Specialised in old broadleaved forests with diverse stand structure.",
+    "notability": "Woodpecker",
+    "whyNotable": ["Demanding habitat", "Relatively scarce"]
+  },
+  "Picus canus": {
+    "commonName": "Grey-headed Woodpecker",
+    "description": "Greenish-grey woodpecker, often in quiet woodland areas.",
+    "notability": "Woodpecker",
+    "whyNotable": ["Inconspicuous species", "Rare in settled areas"]
+  },
+  "Picoides tridactylus": {
+    "commonName": "Eurasian Three-toed Woodpecker",
+    "description": "Rare woodpecker of old coniferous forests and upland zones.",
+    "notability": "Woodpecker",
+    "whyNotable": ["Very rare", "Indicator of near-natural forests"]
+  },
+  "Jynx torquilla": {
+    "commonName": "Eurasian Wryneck",
+    "description": "Woodpecker relative with an undulating flight and a distinctive call.",
+    "notability": "Woodpecker",
+    "whyNotable": ["Rare breeding bird", "Unusual behaviour"]
+  },
+  "Lanius collurio": {
+    "commonName": "Red-backed Shrike",
+    "description": "Summer shrike known for impaling prey on thorns as a larder.",
+    "notability": "Shrike",
+    "whyNotable": ["Fascinating behaviour", "Breeding-season rarity"]
+  },
+  "Bombycilla garrulus": {
+    "commonName": "Bohemian Waxwing",
+    "description": "Elegant winter visitor with distinctive red wing-tips.",
+    "notability": "Irruption Species",
+    "whyNotable": ["Irruption species", "Highly photogenic"]
+  }
+}

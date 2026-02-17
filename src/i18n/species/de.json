@@ -1,0 +1,530 @@
+{
+  "Turdus merula": {
+    "commonName": "Amsel",
+    "description": "Haeufiger Singvogel in Gaerten und Parks, bekannt fuer seinen melodischen Gesang in der Daemmerung."
+  },
+  "Panurus biarmicus": {
+    "commonName": "Bartmeise",
+    "description": "Schilfbewohner mit langem Schwanz; ruft oft in Trupps in Feuchtgebieten."
+  },
+  "Fringilla montifringilla": {
+    "commonName": "Bergfink",
+    "description": "Wintergast aus dem Norden, oft in gemischten Finkenschwaermen an Futterstellen.",
+    "notability": "Zugzeit-Highlight",
+    "whyNotable": ["Massenaufkommen moeglich", "Saisonale Besonderheit"]
+  },
+  "Anser albifrons": {
+    "commonName": "Blaessgans",
+    "description": "Zuggaenseart mit heller Stirnzeichnung, haeufig auf Feldern und Rastgewaessern."
+  },
+  "Fulica atra": {
+    "commonName": "Blaesshuhn",
+    "description": "Dunkler Wasservogel mit weissem Stirnschild, sehr haeufig auf Teichen und Seen."
+  },
+  "Cyanistes caeruleus": {
+    "commonName": "Blaumeise",
+    "description": "Kleine, lebhafte Meise mit blau-gelbem Gefieder; regelmaessiger Gast in Gaerten."
+  },
+  "Fringilla coelebs": {
+    "commonName": "Buchfink",
+    "description": "Sehr haeufiger Singvogel mit markantem Ruf, in Waeldern, Parks und Siedlungen verbreitet."
+  },
+  "Dendrocopos major": {
+    "commonName": "Buntspecht",
+    "description": "Typischer Specht unserer Laubwaelder, oft durch Trommeln und harte Rufe auffaellig."
+  },
+  "Corvus monedula": {
+    "commonName": "Dohle",
+    "description": "Kleiner Rabenvogel, oft in Trupps bei Ortschaften, Feldern und offenen Flaechen."
+  },
+  "Garrulus glandarius": {
+    "commonName": "Eichelhaeher",
+    "description": "Auffaelliger Waldvogel mit rauem Warnruf; sammelt im Herbst Eicheln als Vorrat."
+  },
+  "Alcedo atthis": {
+    "commonName": "Eisvogel",
+    "description": "Leuchtend blau-oranger Uferjaeger, der klare Gewaesser und steile Uferbaeume liebt.",
+    "notability": "Lokales Symbol",
+    "whyNotable": ["Selten gut zu sehen", "Starker Sympathietraeger"]
+  },
+  "Pica pica": {
+    "commonName": "Elster",
+    "description": "Schwarz-weisser Rabenvogel mit langem Schwanz; intelligent und sehr anpassungsfaehig."
+  },
+  "Spinus spinus": {
+    "commonName": "Erlenzeisig",
+    "description": "Kleiner Fink, der im Winter oft in Trupps an Erlen und Futterstellen auftritt."
+  },
+  "Alauda arvensis": {
+    "commonName": "Feldlerche",
+    "description": "Offenlandart mit singendem Hoehenflug, typisch fuer Acker- und Wiesenlandschaften."
+  },
+  "Passer montanus": {
+    "commonName": "Feldsperling",
+    "description": "Kleiner Sperling mit brauner Kopfkappe; haeufig in Doerfern, Hecken und Feldraendern."
+  },
+  "Columba livia": {
+    "commonName": "Felsentaube",
+    "description": "Ursprungsart der Stadttauben, in Siedlungen und an Gebaeuden weit verbreitet."
+  },
+  "Certhia brachydactyla": {
+    "commonName": "Gartenbaumlaeufer",
+    "description": "Unscheinbarer Klettervogel, sucht Insekten an Baumstaemmen in Parks und Gaerten."
+  },
+  "Motacilla cinerea": {
+    "commonName": "Gebirgsstelze",
+    "description": "Schlanke Stelze mit langem Schwanz, bevorzugt fliessende Gewaesser und Uferbereiche."
+  },
+  "Pyrrhula pyrrhula": {
+    "commonName": "Gimpel",
+    "description": "Kraeftiger Fink mit ruhigem Verhalten; Maennchen leuchtend rot, oft in Gehoelzen."
+  },
+  "Emberiza citrinella": {
+    "commonName": "Goldammer",
+    "description": "Gelb gefaerbte Ammer der Feldflur, singt gern von Zaeunen und Hecken aus."
+  },
+  "Anser anser": {
+    "commonName": "Graugans",
+    "description": "Grosse Wildgans und Stammform vieler Hausgaense, haeufig an Gewaessern und Wiesen."
+  },
+  "Ardea cinerea": {
+    "commonName": "Graureiher",
+    "description": "Grossreiher mit langem Hals, jagt stoisch in Flachwasserzonen und auf Wiesen."
+  },
+  "Chloris chloris": {
+    "commonName": "Gruenfink",
+    "description": "Robuster Fink mit nasalem Ruf; oft an Futterstellen, Hecken und Ortsraendern."
+  },
+  "Picus viridis": {
+    "commonName": "Gruenspecht",
+    "description": "Specht der offenen Landschaften, sucht am Boden nach Ameisen und ruft laut lachend.",
+    "notability": "Specht",
+    "whyNotable": ["Lauter Lachtausruf", "Gut in offenen Flaechen"]
+  },
+  "Lophophanes cristatus": {
+    "commonName": "Haubenmeise",
+    "description": "Charakteristische Meise mit Haube, vor allem in Nadelwaeldern zu finden."
+  },
+  "Phoenicurus ochruros": {
+    "commonName": "Hausrotschwanz",
+    "description": "Siedlungsnaher Insektenfresser, oft auf Daechern und Mauern mit knirschendem Gesang."
+  },
+  "Passer domesticus": {
+    "commonName": "Haussperling",
+    "description": "Klassischer Siedlungsvogel in Gruppen, eng an menschliche Bebauung gebunden."
+  },
+  "Prunella modularis": {
+    "commonName": "Heckenbraunelle",
+    "description": "Unauffaelliger Singvogel aus dichtem Unterwuchs, mit feinem, hohem Gesang."
+  },
+  "Lullula arborea": {
+    "commonName": "Heidelerche",
+    "description": "Seltenere Lerchenart trockener Offenflaechen, mit weichem, melodischem Singflug."
+  },
+  "Cygnus olor": {
+    "commonName": "Hoeckerschwan",
+    "description": "Grosser Schwan mit orangefarbenem Schnabel und schwarzem Hoecker, oft auf Seen."
+  },
+  "Phasianus colchicus": {
+    "commonName": "Jagdfasan",
+    "description": "Bodenbewohnender Huervogel von Feldern und Hecken, Maennchen auffaellig bunt."
+  },
+  "Coccothraustes coccothraustes": {
+    "commonName": "Kernbeisser",
+    "description": "Kraeftiger Fink mit massivem Schnabel, kann selbst harte Samen und Kerne knacken.",
+    "notability": "Auffaelliger Fink",
+    "whyNotable": ["Beeindruckender Schnabel", "Selten lang zu beobachten"]
+  },
+  "Sitta europaea": {
+    "commonName": "Kleiber",
+    "description": "Einziger einheimischer Vogel, der kopfvoran am Stamm abwaerts laufen kann."
+  },
+  "Parus major": {
+    "commonName": "Kohlmeise",
+    "description": "Groesste heimische Meise; sehr haeufig, vielseitig und stimmlich markant."
+  },
+  "Corvus corax": {
+    "commonName": "Kolkrabe",
+    "description": "Groesster Singvogel Europas mit tiefem Ruf und beeindruckendem Gleitflug."
+  },
+  "Phalacrocorax carbo": {
+    "commonName": "Kormoran",
+    "description": "Dunkler Fischjaeger, trocknet nach Tauchgaengen oft mit ausgebreiteten Fluegeln."
+  },
+  "Grus grus": {
+    "commonName": "Kranich",
+    "description": "Zugvogel mit trompetenartigen Rufen, oft in Formationen.",
+    "notability": "Zugzeit-Highlight",
+    "whyNotable": ["Zugzeit-Spektakel", "Starker Lokalklang"]
+  },
+  "Anas crecca": {
+    "commonName": "Krickente",
+    "description": "Kleine Entenart der Flachgewaesser, oft in Trupps an ruhigen Uferzonen."
+  },
+  "Anser brachyrhynchus": {
+    "commonName": "Kurzschnabelgans",
+    "description": "Nordische Zuggans, in Mitteleuropa vor allem waehrend Zug und Winter zu beobachten."
+  },
+  "Buteo buteo": {
+    "commonName": "Maeusebussard",
+    "description": "Hauefigster Greifvogel der Region; kreist ueber Feldern auf Nahrungssuche.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Bekannter Greifvogel", "Gutes Zeichen fuer offene Landschaft"]
+  },
+  "Turdus viscivorus": {
+    "commonName": "Misteldrossel",
+    "description": "Grosse Drossel offener Waelder, verteidigt Beerenbaeume im Winter energisch."
+  },
+  "Corvus cornix": {
+    "commonName": "Nebelkraehe",
+    "description": "Grauschwarzer Rabenvogel, regional haeufig und sehr anpassungsfaehig."
+  },
+  "Alopochen aegyptiaca": {
+    "commonName": "Nilgans",
+    "description": "Eingebuergerte Gans mit markanter Augenzeichnung, oft an Park- und Flussgewaessern."
+  },
+  "Corvus corone": {
+    "commonName": "Rabenkraehe",
+    "description": "Ganz schwarzer Rabenvogel, intelligent und in Agrar- wie Siedlungsraeumen haeufig."
+  },
+  "Lanius excubitor": {
+    "commonName": "Raubwuerger",
+    "description": "Grauer Wuerger, beobachtet von erhoehten Ansitzen.",
+    "notability": "Wuerger",
+    "whyNotable": ["Raubvogel-Attituede im Singvogelkoerper", "Winterlicher Spezialist"]
+  },
+  "Columba palumbus": {
+    "commonName": "Ringeltaube",
+    "description": "Groesste heimische Taube mit weissem Halsfleck, in Waeldern und Staedten verbreitet."
+  },
+  "Emberiza schoeniclus": {
+    "commonName": "Rohrammer",
+    "description": "Ammerart der Schilfgebiete und Feuchtwiesen mit charakteristischen Rufen."
+  },
+  "Botaurus stellaris": {
+    "commonName": "Rohrdommel",
+    "description": "Meister der Tarnung im Schilf, oft nur durch tiefe Rufe verraten.",
+    "notability": "Feuchtgebiets-Highlight",
+    "whyNotable": ["Extrem schwer zu sehen", "Starker Indikator fuer gesunde Moore"]
+  },
+  "Turdus iliacus": {
+    "commonName": "Rotdrossel",
+    "description": "Wintergast mit auffaelligen rostroten Flanken, oft in beerentragenden Gehoelzen."
+  },
+  "Erithacus rubecula": {
+    "commonName": "Rotkehlchen",
+    "description": "Beliebter Gartenvogel mit orange-roter Brust und klaren, perlenden Gesangsphrasen."
+  },
+  "Corvus frugilegus": {
+    "commonName": "Saatkraehe",
+    "description": "Koloniebruetender Rabenvogel mit heller Schnabelbasis, haeufig auf Feldern."
+  },
+  "Tyto alba": {
+    "commonName": "Schleiereule",
+    "description": "Helle Eule mit herzfoermigem Gesichtsschleier.",
+    "notability": "Eule",
+    "whyNotable": ["Sehr fotogen", "Seltene Sichtung"]
+  },
+  "Mareca strepera": {
+    "commonName": "Schnatterente",
+    "description": "Unauffaellige Entenart ruhiger Gewaesser, Maennchen mit feiner grauer Zeichnung."
+  },
+  "Aegithalos caudatus": {
+    "commonName": "Schwanzmeise",
+    "description": "Kleine, rundliche Meise mit sehr langem Schwanz; zieht oft in lebhaften Trupps."
+  },
+  "Saxicola rubicola": {
+    "commonName": "Schwarzkehlchen",
+    "description": "Kleiner Offenlandvogel auf Ansitzwarten, Maennchen mit schwarzem Kopf und roter Brust."
+  },
+  "Dryocopus martius": {
+    "commonName": "Schwarzspecht",
+    "description": "Groesster heimischer Specht, meisselt markante Hoehlen in alte Baumstaemme.",
+    "notability": "Specht",
+    "whyNotable": ["Starker Ruf", "Praegt den Waldklang"]
+  },
+  "Cygnus cygnus": {
+    "commonName": "Singschwan",
+    "description": "Nordischer Schwan mit gelb-schwarzem Schnabel, vor allem als Wintergast."
+  },
+  "Regulus ignicapilla": {
+    "commonName": "Sommergoldhaehnchen",
+    "description": "Winziger Waldvogel mit leuchtendem Scheitelstreif und sehr feinen, hohen Rufen."
+  },
+  "Sturnus vulgaris": {
+    "commonName": "Star",
+    "description": "Geselliger Vogel mit metallisch glaenzendem Gefieder und grosser Stimmvielfalt."
+  },
+  "Athene noctua": {
+    "commonName": "Steinkauz",
+    "description": "Kleine Eule offener Landschaften, oft an Streuobstwiesen gebunden.",
+    "notability": "Eule",
+    "whyNotable": ["Kulturlandschafts-Spezialist", "Lokale Raritaet"]
+  },
+  "Carduelis carduelis": {
+    "commonName": "Stieglitz",
+    "description": "Farbenfroher Distelfink mit roter Gesichtsmaske und klingelndem Ruf."
+  },
+  "Anas platyrhynchos": {
+    "commonName": "Stockente",
+    "description": "Haeufigste Entenart an stehenden und langsam fliessenden Gewaessern."
+  },
+  "Poecile palustris": {
+    "commonName": "Sumpfmeise",
+    "description": "Unspektakulaere Meise mit klarem Ruf, bevorzugt feuchte Laub- und Mischwaelder."
+  },
+  "Acanthis flammea": {
+    "commonName": "Taigabirkenzeisig",
+    "description": "Nordischer Fink, in Invasionsjahren als Wintergast in Erlen- und Birkenbestaenden."
+  },
+  "Periparus ater": {
+    "commonName": "Tannenmeise",
+    "description": "Kleine Nadelwald-Meise mit weissem Nackenfleck und schnellen Kontaktlauten."
+  },
+  "Gallinula chloropus": {
+    "commonName": "Teichhuhn",
+    "description": "Scheuer Rallenverwandter mit rotem Stirnschild, lebt in dichter Ufervegetation."
+  },
+  "Anser serrirostris": {
+    "commonName": "Tundrasaatgans",
+    "description": "Durchziehende Saatgans aus noerdlichen Brutgebieten, rastet auf Feuchtwiesen und Feldern."
+  },
+  "Streptopelia decaocto": {
+    "commonName": "Tuerkentaube",
+    "description": "Helle Taube mit schwarzem Halsring, typischer Siedlungsbewohner."
+  },
+  "Falco tinnunculus": {
+    "commonName": "Turmfalke",
+    "description": "Kleiner Greifvogel mit typischem Ruettelflug ueber Wiesen und Wegrainen.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Klassischer Stadt- und Dorfgreif", "Gut zu beobachten"]
+  },
+  "Turdus pilaris": {
+    "commonName": "Wacholderdrossel",
+    "description": "Drossel der offenen Landschaften, im Winter oft in grossen Trupps unterwegs."
+  },
+  "Certhia familiaris": {
+    "commonName": "Waldbaumlaeufer",
+    "description": "Rindenkletterer alter Waelder, sucht in Spalten nach Insekten und Spinnen."
+  },
+  "Strix aluco": {
+    "commonName": "Waldkauz",
+    "description": "Typische Wald- und Stadtparkeule, oft nur an Rufen erkennbar.",
+    "notability": "Eule",
+    "whyNotable": ["Markanter Ruf", "Nahe am Menschen"]
+  },
+  "Asio otus": {
+    "commonName": "Waldohreule",
+    "description": "Gut getarnte Eule mit markanten Federohren.",
+    "notability": "Eule",
+    "whyNotable": ["Winterliche Schlafbaeume", "Unauffaellig und selten sichtbar"]
+  },
+  "Scolopax rusticola": {
+    "commonName": "Waldschnepfe",
+    "description": "Dichtwaldart mit langem Schnabel; Balzflug in der Daemmerung besonders auffaellig."
+  },
+  "Tringa ochropus": {
+    "commonName": "Waldwasserlaeufer",
+    "description": "Kleiner Watvogel, nutzt auf Zug und im Winter Teichraender und Flachwasserbereiche."
+  },
+  "Cinclus cinclus": {
+    "commonName": "Wasseramsel",
+    "description": "Dunkler Gebirgsbachvogel, taucht und laeuft unter Wasser auf der Nahrungssuche."
+  },
+  "Rallus aquaticus": {
+    "commonName": "Wasserralle",
+    "description": "Sehr versteckte Rallenart der Schilfzonen, meist eher zu hoeren als zu sehen."
+  },
+  "Poecile montanus": {
+    "commonName": "Weidenmeise",
+    "description": "Meise feuchter Gehoelze, aehnlich Sumpfmeise, aber mit etwas anderem Rufbild."
+  },
+  "Branta leucopsis": {
+    "commonName": "Weisswangengans",
+    "description": "Kontrastreich gezeichnete Gans, in Winterhalbjahr oft auf Kuesten- und Binnenrastplaetzen."
+  },
+  "Anthus pratensis": {
+    "commonName": "Wiesenpieper",
+    "description": "Offenlandvogel feuchter Wiesen mit feinem Gesang waehrend kurzer Singfluege."
+  },
+  "Regulus regulus": {
+    "commonName": "Wintergoldhaehnchen",
+    "description": "Kleinster heimischer Vogel, rastlos in Koniferen auf der Suche nach Kleininsekten."
+  },
+  "Troglodytes troglodytes": {
+    "commonName": "Zaunkoenig",
+    "description": "Winziger, lauter Singvogel mit aufgerichtetem Schwanz in dichtem Unterwuchs."
+  },
+  "Phylloscopus collybita": {
+    "commonName": "Zilpzalp",
+    "description": "Hauefiger Laubsaenger mit namensgebendem Ruf, frisst vor allem kleine Insekten."
+  },
+  "Haliaeetus albicilla": {
+    "commonName": "Seeadler",
+    "description": "Groesster Greifvogel Deutschlands, oft in Gewaessernaehe oder an Seen.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Imposante Spannweite", "Beobachtung ist etwas Besonderes"]
+  },
+  "Falco peregrinus": {
+    "commonName": "Wanderfalke",
+    "description": "Schnellster Vogel im Sturzflug, jagt voellig ueberraschend.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Spektakulaere Jagd", "Markante Stadtsiedler"]
+  },
+  "Milvus milvus": {
+    "commonName": "Rotmilan",
+    "description": "Greifvogel mit tief gegabeltem Schwanz, kreist oft ueber Feldern.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Deutschland ist Kerngebiet", "Auffaelliges Flugbild"]
+  },
+  "Milvus migrans": {
+    "commonName": "Schwarzmilan",
+    "description": "Sommergast, haeufig in der Naehe von Fluessen und Seen.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Zieht im Sommer durch", "Selten in staedtischer Naehe"]
+  },
+  "Pandion haliaetus": {
+    "commonName": "Fischadler",
+    "description": "Spezialisierter Fischjaeger, ruettelt ueber dem Wasser.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Seltene Sichtung", "Charakteristische Jagd"]
+  },
+  "Accipiter gentilis": {
+    "commonName": "Habicht",
+    "description": "Kraeftiger Waldgreif, taucht oft unerwartet an Futterstellen auf.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Scheu und schnell", "Selten im Freien zu sehen"]
+  },
+  "Accipiter nisus": {
+    "commonName": "Sperber",
+    "description": "Kleiner, flinker Greifvogel, jagt in Hecken und Gaerten.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Spannende Jagdszenen", "Kontrast zu Singvoegeln"]
+  },
+  "Circus cyaneus": {
+    "commonName": "Kornweihe",
+    "description": "Schlanker Greifvogel, der niedrig ueber Feldern und Heiden streift.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Winterlicher Gast", "Eleganter Suchflug"]
+  },
+  "Circus aeruginosus": {
+    "commonName": "Rohrweihe",
+    "description": "Spezialist fuer Schilfguertel, kreist oft langsam ueber Feuchtgebieten.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Feuchtgebiets-Highlight", "Gut an Brutplaetzen"]
+  },
+  "Pernis apivorus": {
+    "commonName": "Wespenbussard",
+    "description": "Scheuer Greifvogel, der vor allem Wespen und deren Brut frisst.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Sommerlicher Spezialist", "Schwierig zu entdecken"]
+  },
+  "Falco subbuteo": {
+    "commonName": "Baumfalke",
+    "description": "Wendiger Kleinfalke, jagt Schwalben und Libellen im schnellen Flug.",
+    "notability": "Greifvogel",
+    "whyNotable": ["Dynamische Jagd", "Seltener Anblick"]
+  },
+  "Bubo bubo": {
+    "commonName": "Uhu",
+    "description": "Groesste Eule Europas, meist nachtaktiv und sehr scheu.",
+    "notability": "Eule",
+    "whyNotable": ["Seltene Nachtsichtung", "Beeindruckende Groesse"]
+  },
+  "Asio flammeus": {
+    "commonName": "Sumpfohreule",
+    "description": "Tagaktive Eule, die niedrig ueber offenen Flaechen jagt.",
+    "notability": "Eule",
+    "whyNotable": ["Tagsueber aktiv", "Selten und wanderfreudig"]
+  },
+  "Ciconia nigra": {
+    "commonName": "Schwarzstorch",
+    "description": "Scheuer Waldstorch, deutlich seltener als der Weissstorch.",
+    "notability": "Grossvogel",
+    "whyNotable": ["Seltene Beobachtung", "Wald- und Feuchtgebietsspezialist"]
+  },
+  "Ciconia ciconia": {
+    "commonName": "Weissstorch",
+    "description": "Bekannter Kulturbegleiter, nistet oft in Doerfern.",
+    "notability": "Lokales Symbol",
+    "whyNotable": ["Stadt- und Dorfikon", "Symbolart in Deutschland"]
+  },
+  "Ardea alba": {
+    "commonName": "Silberreiher",
+    "description": "Eleganter, grosser Reiher mit rein weissem Gefieder.",
+    "notability": "Wasservogel",
+    "whyNotable": ["Auffaellige Erscheinung", "Feuchtgebiets-Highlight"]
+  },
+  "Platalea leucorodia": {
+    "commonName": "Loeffler",
+    "description": "Auffaelliger Watvogel mit loeffelfoermigem Schnabel.",
+    "notability": "Wasservogel",
+    "whyNotable": ["Unverwechselbares Aussehen", "Selten im Inland"]
+  },
+  "Mergus merganser": {
+    "commonName": "Gaensesaeger",
+    "description": "Grosser Saeger mit zottigem Schopf, jagt Fische in klaren Gewaessern.",
+    "notability": "Wasservogel",
+    "whyNotable": ["Winterlicher Gast", "Auffaelliger Kopfschmuck"]
+  },
+  "Mergellus albellus": {
+    "commonName": "Zwergsaeger",
+    "description": "Kleiner Saeger mit kontrastreichem Gefieder, haeufig in kalten Monaten.",
+    "notability": "Wasservogel",
+    "whyNotable": ["Selten und attraktiv", "Winterliches Highlight"]
+  },
+  "Upupa epops": {
+    "commonName": "Wiedehopf",
+    "description": "Auffaelliges Federkleid mit Haube, ruft hup-hup.",
+    "notability": "Ikonische Art",
+    "whyNotable": ["Sehr fotogen", "Saisonale Besonderheit"]
+  },
+  "Merops apiaster": {
+    "commonName": "Bienenfresser",
+    "description": "Extrem farbenfroher Insektenjaeger, oft kolonial bruetend.",
+    "notability": "Farbenpracht",
+    "whyNotable": ["Farbenpracht", "Nur lokal zu finden"]
+  },
+  "Oriolus oriolus": {
+    "commonName": "Pirol",
+    "description": "Gelb-schwarzer Waldsaenger, haeufig nur am Ruf erkennbar.",
+    "notability": "Farbenpracht",
+    "whyNotable": ["Selten sichtbar", "Unverwechselbarer Ruf"]
+  },
+  "Dendrocopos medius": {
+    "commonName": "Mittelspecht",
+    "description": "Spezialisiert auf alte Laubwaelder und strukturreiche Bestaende.",
+    "notability": "Specht",
+    "whyNotable": ["Anspruchsvoller Lebensraum", "Relativ selten"]
+  },
+  "Picus canus": {
+    "commonName": "Grauspecht",
+    "description": "Gruenlich-grauer Specht, oft in ruhigen Waldgebieten.",
+    "notability": "Specht",
+    "whyNotable": ["Unauffaellige Art", "Selten im Siedlungsraum"]
+  },
+  "Picoides tridactylus": {
+    "commonName": "Dreizehenspecht",
+    "description": "Seltene Spechtart in alten Nadelwaeldern und Hochlagen.",
+    "notability": "Specht",
+    "whyNotable": ["Sehr selten", "Zeiger fuer naturnahe Waelder"]
+  },
+  "Jynx torquilla": {
+    "commonName": "Wendehals",
+    "description": "Spechtverwandter mit wellenfoermigem Flug und auffaelligem Ruf.",
+    "notability": "Specht",
+    "whyNotable": ["Seltene Brutart", "Ungewoehnliche Verhaltensweise"]
+  },
+  "Lanius collurio": {
+    "commonName": "Neuntoeter",
+    "description": "Sommerlicher Wuerger, bekannt fuer Vorratshaltung.",
+    "notability": "Wuerger",
+    "whyNotable": ["Verhaltens-Highlight", "Brutzeitliche Seltenheit"]
+  },
+  "Bombycilla garrulus": {
+    "commonName": "Seidenschwanz",
+    "description": "Eleganter Wintergast mit auffaelligen roten Fluegelspitzen.",
+    "notability": "Irruptionsart",
+    "whyNotable": ["Irruptionsart", "Sehr fotogen"]
+  }
+}
