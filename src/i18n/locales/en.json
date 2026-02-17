@@ -46,6 +46,7 @@
   "live.sectionLabel": "Live Highlights",
   "live.heading": "Live",
   "live.autoRefresh": "Auto-refreshes every 30 seconds.",
+  "live.degradedNotice": "Live server is currently unreachable. Showing cached detections.",
   "live.statusLive": "Live",
   "live.statusMinutesAgo": "{minutes} min ago",
   "live.statusHoursAgo": "{hours} h ago",

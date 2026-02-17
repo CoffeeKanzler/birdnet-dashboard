@@ -47,6 +47,7 @@ type TodayViewProps = {
   isLoading: boolean
   error: string | null
   lastUpdated: Date | null
+  cacheMode: 'live' | 'stale' | 'unknown'
   refresh: () => Promise<void>
   scrollContainerRef: RefObject<HTMLDivElement>
   onSpeciesSelect?: (species: {
@@ -61,6 +62,7 @@ const TodayView = ({
   isLoading,
   error,
   lastUpdated,
+  cacheMode,
   refresh,
   scrollContainerRef,
   onSpeciesSelect,
@@ -262,6 +264,12 @@ const TodayView = ({
           >
             {t('common.clear')}
           </button>
+        </div>
+      ) : null}
+
+      {cacheMode === 'stale' ? (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700/70 dark:bg-amber-900/30 dark:text-amber-200">
+          {t('live.degradedNotice')}
         </div>
       ) : null}
 

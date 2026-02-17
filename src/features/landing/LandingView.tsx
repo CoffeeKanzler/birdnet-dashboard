@@ -21,6 +21,7 @@ type LiveHighlightCardProps = {
   commonName: string
   scientificName: string
   timestamp: string
+  cacheMode: 'live' | 'stale' | 'unknown'
   onSelect?: (species: { commonName: string; scientificName: string }) => void
   onAttributionOpen?: () => void
 }
@@ -32,6 +33,7 @@ const LiveHighlightCard = ({
   commonName,
   scientificName,
   timestamp,
+  cacheMode,
   onSelect,
   onAttributionOpen,
 }: LiveHighlightCardProps) => {
@@ -50,17 +52,17 @@ const LiveHighlightCard = ({
 
     const ageMinutes = Math.floor((Date.now() - value) / 60000)
 
-    if (ageMinutes <= 15) {
+    if (cacheMode !== 'stale' && ageMinutes <= 15) {
       return t('live.statusLive')
     }
 
     if (ageMinutes < 60) {
-      return t('live.statusMinutesAgo', { minutes: ageMinutes })
+      return t('live.statusMinutesAgo', { minutes: Math.max(1, ageMinutes) })
     }
 
     const ageHours = Math.floor(ageMinutes / 60)
     return t('live.statusHoursAgo', { hours: ageHours })
-  }, [timestamp])
+  }, [cacheMode, timestamp])
 
   const handleSelect = () => {
     onSelect?.({ commonName, scientificName })
@@ -173,7 +175,7 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
   const isSm = useMediaQuery('(min-width: 640px)')
   const maxItems = isLg ? 9 : isSm ? 6 : 3
 
-  const { detections, isLoading, error } = useDetections({
+  const { detections, isLoading, error, cacheMode } = useDetections({
     refreshIntervalMs: LIVE_REFRESH_INTERVAL_MS,
     limit: LIVE_FETCH_LIMIT,
     recentOnly: true,
@@ -228,6 +230,12 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
           </div>
         </header>
 
+        {cacheMode === 'stale' ? (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700/70 dark:bg-amber-900/30 dark:text-amber-200">
+            {t('live.degradedNotice')}
+          </div>
+        ) : null}
+
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {showSkeletonCards
             ? Array.from({ length: maxItems }, (_, index) => (
@@ -258,6 +266,7 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
                 )
                 : latestDetections.map((item) => (
                   <LiveHighlightCard
+                    cacheMode={cacheMode}
                     commonName={item.commonName}
                     key={item.key}
                     onAttributionOpen={onAttributionOpen}

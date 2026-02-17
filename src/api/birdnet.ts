@@ -77,6 +77,12 @@ type SpeciesInfoApiResponse = {
   }
 }
 
+export type DetectionsCacheMode = 'live' | 'stale' | 'unknown'
+type DetectionsFetchResult = {
+  detections: Detection[]
+  cacheMode: DetectionsCacheMode
+}
+
 const TODAY_PAGE_LIMIT = 200
 const MAX_TODAY_PAGES = 100
 
@@ -142,10 +148,20 @@ export const fetchDetectionsPage = async ({
   offset = 0,
   signal,
 }: FetchDetectionsOptions = {}): Promise<Detection[]> => {
+  const result = await fetchDetectionsPageWithMeta({ limit, offset, signal })
+  return result.detections
+}
+
+export const fetchDetectionsPageWithMeta = async ({
+  limit = 100,
+  offset = 0,
+  signal,
+}: FetchDetectionsOptions = {}): Promise<DetectionsFetchResult> => {
   const params = new URLSearchParams({
     numResults: String(limit),
     offset: String(offset),
   })
+  let cacheMode: DetectionsCacheMode = 'unknown'
 
   const data = await requestJson<
     | DetectionApiRecord[]
@@ -154,15 +170,24 @@ export const fetchDetectionsPage = async ({
         detections?: DetectionApiRecord[]
         items?: DetectionApiRecord[]
       }
-  >(buildApiUrl('/api/v2/detections', params), { signal })
+  >(buildApiUrl('/api/v2/detections', params), {
+    signal,
+    onResponse: (response) => {
+      const header = response.headers.get('x-detections-cache')
+      cacheMode = header === 'live' || header === 'stale' ? header : 'unknown'
+    },
+  })
 
   const records = Array.isArray(data)
     ? data
     : data.data ?? data.detections ?? data.items ?? []
 
-  return records
-    .map(toDetection)
-    .sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp))
+  return {
+    detections: records
+      .map(toDetection)
+      .sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp)),
+    cacheMode,
+  }
 }
 
 export const fetchDetectionsRangePage = async ({
@@ -202,21 +227,46 @@ export const fetchRecentDetections = async ({
   limit = 100,
   signal,
 }: FetchDetectionsOptions = {}): Promise<Detection[]> => {
+  const result = await fetchRecentDetectionsWithMeta({ limit, signal })
+  return result.detections
+}
+
+export const fetchRecentDetectionsWithMeta = async ({
+  limit = 100,
+  signal,
+}: FetchDetectionsOptions = {}): Promise<DetectionsFetchResult> => {
   const params = new URLSearchParams({
     limit: String(limit),
   })
+  let cacheMode: DetectionsCacheMode = 'unknown'
 
   const data = await requestJson<DetectionApiRecord[]>(
     buildApiUrl('/api/v2/detections/recent', params),
-    { signal },
+    {
+      signal,
+      onResponse: (response) => {
+        const header = response.headers.get('x-detections-cache')
+        cacheMode = header === 'live' || header === 'stale' ? header : 'unknown'
+      },
+    },
   )
 
-  return data.map(toDetection).sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp))
+  return {
+    detections: data.map(toDetection).sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp)),
+    cacheMode,
+  }
 }
 
 export const fetchDetections = async (
   options: FetchDetectionsOptions = {},
 ): Promise<Detection[]> => {
+  const result = await fetchDetectionsWithMeta(options)
+  return result.detections
+}
+
+export const fetchDetectionsWithMeta = async (
+  options: FetchDetectionsOptions = {},
+): Promise<DetectionsFetchResult> => {
   // Default today view fetch; page until we cross today's start.
   const pageLimit = options.limit && options.limit > 0 ? options.limit : TODAY_PAGE_LIMIT
   const todayStart = new Date()
@@ -225,25 +275,29 @@ export const fetchDetections = async (
 
   const collected: Detection[] = []
   let offset = options.offset ?? 0
+  let cacheMode: DetectionsCacheMode = 'unknown'
 
   for (let pageIndex = 0; pageIndex < MAX_TODAY_PAGES; pageIndex += 1) {
-    const page = await fetchDetectionsPage({
+    const page = await fetchDetectionsPageWithMeta({
       limit: pageLimit,
       offset,
       signal: options.signal,
     })
+    if (cacheMode === 'unknown') {
+      cacheMode = page.cacheMode
+    }
 
-    if (page.length === 0) {
+    if (page.detections.length === 0) {
       break
     }
 
-    collected.push(...page)
+    collected.push(...page.detections)
 
-    if (page.length < pageLimit) {
+    if (page.detections.length < pageLimit) {
       break
     }
 
-    const oldestTimestamp = oldestTimestampInPage(page)
+    const oldestTimestamp = oldestTimestampInPage(page.detections)
     if (oldestTimestamp !== null && oldestTimestamp < startTime) {
       break
     }
@@ -251,16 +305,19 @@ export const fetchDetections = async (
     offset += pageLimit
   }
 
-  return collected
-    .filter((detection) => {
-      const timestamp = toTimestamp(detection.timestamp)
-      if (timestamp === null) {
-        return false
-      }
+  return {
+    detections: collected
+      .filter((detection) => {
+        const timestamp = toTimestamp(detection.timestamp)
+        if (timestamp === null) {
+          return false
+        }
 
-      return timestamp >= startTime
-    })
-    .sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp))
+        return timestamp >= startTime
+      })
+      .sort((a, b) => toSortValue(b.timestamp) - toSortValue(a.timestamp)),
+    cacheMode,
+  }
 }
 
 export const fetchSpeciesDetectionsPage = async ({

@@ -46,6 +46,7 @@
   "live.sectionLabel": "Live-Highlights",
   "live.heading": "Live",
   "live.autoRefresh": "Automatisch alle 30 Sekunden aktualisiert.",
+  "live.degradedNotice": "Live-Server derzeit nicht erreichbar. Es werden zwischengespeicherte Erkennungen angezeigt.",
   "live.statusLive": "Live",
   "live.statusMinutesAgo": "Vor {minutes} min",
   "live.statusHoursAgo": "Vor {hours} h",

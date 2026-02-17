@@ -11,6 +11,9 @@ const PAGE_FETCH_CONCURRENCY = 4
 const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS ?? '12000')
 const MAX_SUMMARY_PAGES = Number(process.env.MAX_SUMMARY_PAGES ?? '5000')
 const SUMMARY_CACHE_FILE = process.env.SUMMARY_CACHE_FILE ?? '/cache/summary-30d.json'
+const RECENT_CACHE_FILE = process.env.RECENT_CACHE_FILE ?? '/cache/recent-detections.json'
+const RECENT_SNAPSHOT_LIMIT = Number(process.env.RECENT_SNAPSHOT_LIMIT ?? '2000')
+const RECENT_REFRESH_MS = Number(process.env.RECENT_REFRESH_MS ?? `${15 * 60_000}`)
 
 const securityHeaders = {
   'content-security-policy':
@@ -66,6 +69,40 @@ const persistSummaryToDisk = async (payload) => {
   await rename(tempPath, SUMMARY_CACHE_FILE)
 }
 
+const loadRecentFromDisk = async () => {
+  try {
+    const raw = await readFile(RECENT_CACHE_FILE, 'utf8')
+    const payload = JSON.parse(raw)
+    const generatedAtMs = toGeneratedAtMs(payload)
+    const detections = Array.isArray(payload?.detections) ? payload.detections : null
+    if (!generatedAtMs || !detections) {
+      return null
+    }
+    return {
+      generatedAtMs,
+      detections,
+    }
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      return null
+    }
+    console.error('recent cache read failed', error)
+    return null
+  }
+}
+
+const persistRecentToDisk = async (detections) => {
+  const cacheDir = dirname(RECENT_CACHE_FILE)
+  await mkdir(cacheDir, { recursive: true })
+  const payload = {
+    generated_at: new Date().toISOString(),
+    detections,
+  }
+  const tempPath = `${RECENT_CACHE_FILE}.${process.pid}.tmp`
+  await writeFile(tempPath, JSON.stringify(payload), 'utf8')
+  await rename(tempPath, RECENT_CACHE_FILE)
+}
+
 const json = (res, status, payload, extraHeaders = {}) => {
   res.writeHead(status, {
     ...securityHeaders,
@@ -119,6 +156,18 @@ const getTimestamp = (detection) => {
   return Number.isNaN(value) ? null : value
 }
 
+const compareByNewest = (a, b) => {
+  return (getTimestamp(b) ?? 0) - (getTimestamp(a) ?? 0)
+}
+
+const parsePositiveInt = (value, fallback) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallback
+  }
+  return Math.floor(parsed)
+}
+
 const getConfidence = (detection) => {
   const value = Number(detection?.confidence ?? 0)
   if (!Number.isFinite(value)) {
@@ -149,6 +198,28 @@ const fetchRangePage = async (startDate, endDate, offset) => {
   }
   const payload = await response.json()
   return extractDetections(payload)
+}
+
+const fetchRecentFromUpstream = async (limit) => {
+  const params = new URLSearchParams({
+    limit: String(limit),
+  })
+  const response = await fetch(`${API_BASE}/api/v2/detections/recent?${params.toString()}`, {
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    throw new Error(`Recent fetch failed: HTTP ${response.status}`)
+  }
+  const payload = await response.json()
+  if (!Array.isArray(payload)) {
+    throw new Error('Recent fetch failed: non-array payload')
+  }
+  return payload.sort(compareByNewest)
+}
+
+const refreshRecentSnapshot = async () => {
+  const detections = await fetchRecentFromUpstream(RECENT_SNAPSHOT_LIMIT)
+  await persistRecentToDisk(detections)
 }
 
 const buildSummaryPayload = async () => {
@@ -281,13 +352,76 @@ const getSummaryState = async () => {
   }
 }
 
-const bootstrapSummary = async () => {
+const bootstrapCaches = async () => {
   const state = await getSummaryState()
   if (!state.hasPayload || !state.isFresh) {
     startSummaryRefresh().catch((error) => {
       console.error('summary prewarm failed', error)
     })
   }
+
+  const recent = await loadRecentFromDisk()
+  if (!recent || Date.now() - recent.generatedAtMs >= RECENT_REFRESH_MS) {
+    refreshRecentSnapshot().catch((error) => {
+      console.error('recent prewarm failed', error)
+    })
+  }
+}
+
+const proxyUpstreamJson = async (pathWithQuery) => {
+  const response = await fetch(`${API_BASE}${pathWithQuery}`, {
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  })
+  const payload = response.status === 204 ? '' : await response.text()
+  return {
+    status: response.status,
+    payload,
+  }
+}
+
+const fallbackRecentDetections = async (limit) => {
+  const recent = await loadRecentFromDisk()
+  if (!recent) {
+    return null
+  }
+
+  return recent.detections
+    .slice()
+    .sort(compareByNewest)
+    .slice(0, limit)
+}
+
+const fallbackDetectionsPage = async (url) => {
+  const recent = await loadRecentFromDisk()
+  if (!recent) {
+    return null
+  }
+
+  let detections = recent.detections.slice().sort(compareByNewest)
+  const queryType = url.searchParams.get('queryType')
+  const search = (url.searchParams.get('search') ?? '').trim().toLowerCase()
+  if (queryType === 'search' && search) {
+    detections = detections.filter((entry) => {
+      const commonName = String(entry?.common_name ?? entry?.commonName ?? '').toLowerCase()
+      const scientificName = String(entry?.scientific_name ?? entry?.scientificName ?? '').toLowerCase()
+      return commonName.includes(search) || scientificName.includes(search)
+    })
+  }
+
+  const startDate = url.searchParams.get('start_date')
+  const endDate = url.searchParams.get('end_date')
+  if (startDate && endDate) {
+    const startMs = new Date(`${startDate}T00:00:00.000Z`).valueOf()
+    const endExclusiveMs = new Date(`${endDate}T00:00:00.000Z`).valueOf() + 24 * 60 * 60 * 1000
+    detections = detections.filter((entry) => {
+      const timestamp = getTimestamp(entry)
+      return timestamp !== null && timestamp >= startMs && timestamp < endExclusiveMs
+    })
+  }
+
+  const numResults = parsePositiveInt(url.searchParams.get('numResults'), PAGE_LIMIT)
+  const offset = parsePositiveInt(url.searchParams.get('offset'), 0)
+  return detections.slice(offset, offset + numResults)
 }
 
 const server = createServer(async (req, res) => {
@@ -305,6 +439,116 @@ const server = createServer(async (req, res) => {
       json(res, 403, { message: 'forbidden' })
       return
     }
+
+    if (pathname === '/api/v2/detections/recent') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD, OPTIONS',
+        })
+        res.end()
+        return
+      }
+
+      const limit = parsePositiveInt(url.searchParams.get('limit'), 100)
+      try {
+        const upstream = await proxyUpstreamJson(`${pathname}?${url.searchParams.toString()}`)
+        if (upstream.status < 500) {
+          res.writeHead(upstream.status, {
+            ...securityHeaders,
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-detections-cache': 'live',
+          })
+          if (req.method !== 'HEAD') {
+            res.end(upstream.payload)
+          } else {
+            res.end()
+          }
+          return
+        }
+      } catch {
+        // Fall through to snapshot.
+      }
+
+      const fallback = await fallbackRecentDetections(limit)
+      if (!fallback) {
+        json(res, 503, { message: 'upstream_unavailable' })
+        return
+      }
+
+      if (req.method === 'HEAD') {
+        res.writeHead(200, {
+          ...securityHeaders,
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-detections-cache': 'stale',
+        })
+        res.end()
+        return
+      }
+
+      json(res, 200, fallback, {
+        'x-detections-cache': 'stale',
+      })
+      return
+    }
+
+    if (pathname === '/api/v2/detections') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD, OPTIONS',
+        })
+        res.end()
+        return
+      }
+
+      try {
+        const upstream = await proxyUpstreamJson(
+          url.search ? `${pathname}?${url.searchParams.toString()}` : pathname,
+        )
+        if (upstream.status < 500) {
+          res.writeHead(upstream.status, {
+            ...securityHeaders,
+            'content-type': 'application/json; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-detections-cache': 'live',
+          })
+          if (req.method !== 'HEAD') {
+            res.end(upstream.payload)
+          } else {
+            res.end()
+          }
+          return
+        }
+      } catch {
+        // Fall through to snapshot.
+      }
+
+      const fallback = await fallbackDetectionsPage(url)
+      if (!fallback) {
+        json(res, 503, { message: 'upstream_unavailable' })
+        return
+      }
+
+      if (req.method === 'HEAD') {
+        res.writeHead(200, {
+          ...securityHeaders,
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-detections-cache': 'stale',
+        })
+        res.end()
+        return
+      }
+
+      json(res, 200, fallback, {
+        'x-detections-cache': 'stale',
+      })
+      return
+    }
+
     if (pathname === '/api/v2/summary/30d') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
@@ -386,7 +630,12 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`birdnet-dashboard wrapper listening on ${HOST}:${PORT}`)
-  bootstrapSummary().catch((error) => {
-    console.error('summary bootstrap failed', error)
+  bootstrapCaches().catch((error) => {
+    console.error('cache bootstrap failed', error)
   })
+  setInterval(() => {
+    refreshRecentSnapshot().catch((error) => {
+      console.error('recent background refresh failed', error)
+    })
+  }, RECENT_REFRESH_MS)
 })

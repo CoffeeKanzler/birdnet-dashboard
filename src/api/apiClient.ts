@@ -13,6 +13,7 @@ type RequestJsonOptions = {
   retryOnStatuses?: number[]
   headers?: HeadersInit
   cache?: RequestCache
+  onResponse?: (response: Response) => void
 }
 
 const DEFAULT_TIMEOUT_MS = 10_000
@@ -127,6 +128,7 @@ export const requestJson = async <T>(
           ...options.headers,
         },
       })
+      options.onResponse?.(response)
 
       if (!response.ok) {
         const isRetryableStatus = retryOnStatuses.has(response.status)

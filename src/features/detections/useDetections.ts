@@ -2,10 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo } from 'react'
 
 import {
+  type DetectionsCacheMode,
   type Detection,
-  fetchDetections,
-  fetchDetectionsPage,
-  fetchRecentDetections,
+  fetchDetectionsPageWithMeta,
+  fetchDetectionsWithMeta,
+  fetchRecentDetectionsWithMeta,
 } from '../../api/birdnet'
 import { queryKeys } from '../../api/queryKeys'
 import { toUserErrorMessage } from '../../utils/errorMessages'
@@ -22,6 +23,7 @@ type UseDetectionsState = {
   isLoading: boolean
   error: string | null
   lastUpdated: Date | null
+  cacheMode: DetectionsCacheMode
   refresh: () => Promise<void>
 }
 
@@ -39,14 +41,14 @@ export const useDetections = (
   }, [options.limit, options.pageOnly, options.recentOnly])
 
   const fetchFn = useCallback(
-    async (signal: AbortSignal): Promise<Detection[]> => {
+    async (signal: AbortSignal): Promise<{ detections: Detection[]; cacheMode: DetectionsCacheMode }> => {
       if (options.recentOnly) {
-        return fetchRecentDetections({ limit: options.limit, signal })
+        return fetchRecentDetectionsWithMeta({ limit: options.limit, signal })
       }
       if (options.pageOnly) {
-        return fetchDetectionsPage({ limit: options.limit, signal })
+        return fetchDetectionsPageWithMeta({ limit: options.limit, signal })
       }
-      return fetchDetections({ limit: options.limit, signal })
+      return fetchDetectionsWithMeta({ limit: options.limit, signal })
     },
     [options.limit, options.pageOnly, options.recentOnly],
   )
@@ -66,7 +68,7 @@ export const useDetections = (
   }, [refetch])
 
   return {
-    detections: data ?? [],
+    detections: data?.detections ?? [],
     isLoading,
     error: error
       ? toUserErrorMessage(
@@ -76,6 +78,7 @@ export const useDetections = (
         )
       : null,
     lastUpdated: dataUpdatedAt ? new Date(dataUpdatedAt) : null,
+    cacheMode: data?.cacheMode ?? 'unknown',
     refresh,
   }
 }
