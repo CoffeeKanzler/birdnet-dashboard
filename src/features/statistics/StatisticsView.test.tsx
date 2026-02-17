@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Detection } from '../../api/birdnet'
@@ -47,6 +47,7 @@ describe('StatisticsView', () => {
     mocks.useSummary30d.mockReturnValue({
       summary: DEFAULT_SUMMARY,
       isLoading: false,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -74,6 +75,7 @@ describe('StatisticsView', () => {
         },
       },
       isLoading: false,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -94,6 +96,7 @@ describe('StatisticsView', () => {
         },
       },
       isLoading: false,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -121,6 +124,7 @@ describe('StatisticsView', () => {
         },
       },
       isLoading: false,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -136,6 +140,7 @@ describe('StatisticsView', () => {
     mocks.useSummary30d.mockReturnValue({
       summary: null,
       isLoading: true,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -148,6 +153,7 @@ describe('StatisticsView', () => {
     mocks.useSummary30d.mockReturnValue({
       summary: null,
       isLoading: false,
+      isPending: false,
       error: 'Fehler beim Laden',
       refresh: vi.fn(),
     })
@@ -170,6 +176,7 @@ describe('StatisticsView', () => {
         },
       },
       isLoading: false,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -184,7 +191,7 @@ describe('StatisticsView', () => {
 
   it('shows no-data message when detections are empty and not loading', () => {
     renderWithQuery(<StatisticsView />)
-    expect(screen.getByText('Keine Erkennungen in den letzten 30 Tagen.')).toBeInTheDocument()
+    expect(screen.getByText('Keine Erkennungen verfuegbar.')).toBeInTheDocument()
   })
 
   it('shows hourly activity x-axis labels', () => {
@@ -197,6 +204,7 @@ describe('StatisticsView', () => {
         },
       },
       isLoading: false,
+      isPending: false,
       error: null,
       refresh: vi.fn(),
     })
@@ -207,5 +215,93 @@ describe('StatisticsView', () => {
     expect(screen.getByText('12h')).toBeInTheDocument()
     expect(screen.getByText('18h')).toBeInTheDocument()
     expect(screen.getByText('23h')).toBeInTheDocument()
+  })
+
+  it('shows sample note when total detections are available', () => {
+    mocks.useSummary30d.mockReturnValue({
+      summary: {
+        ...DEFAULT_SUMMARY,
+        stats: {
+          ...DEFAULT_SUMMARY.stats,
+          totalDetections: 500000,
+        },
+      },
+      isLoading: false,
+      isPending: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+    renderWithQuery(<StatisticsView />)
+    expect(
+      screen.getByText('Basiert auf 500,000 insgesamt verarbeiteten Erkennungen.'),
+    ).toBeInTheDocument()
+  })
+
+  it('renders skeleton blocks for cards/lists/charts while fallback is loading and summary exists', () => {
+    mocks.useArchiveDetections.mockReturnValue({
+      ...DEFAULT_STATE,
+      isLoading: true,
+    })
+    renderWithQuery(<StatisticsView />)
+    const skeletons = document.querySelectorAll('.animate-pulse')
+    expect(skeletons.length).toBeGreaterThanOrEqual(9)
+  })
+
+  it('computes statistics from fallback detections when summary endpoint fails', () => {
+    mocks.useSummary30d.mockReturnValue({
+      summary: null,
+      isLoading: false,
+      isPending: false,
+      error: 'summary unavailable',
+      refresh: vi.fn(),
+    })
+    mocks.useArchiveDetections.mockReturnValue({
+      ...DEFAULT_STATE,
+      detections: [
+        {
+          id: '1',
+          timestamp: '2026-02-16T06:00:00.000Z',
+          commonName: 'Amsel',
+          scientificName: 'Turdus merula',
+          confidence: 0.5,
+          thumbnailUrl: null,
+          imageUrl: null,
+        },
+        {
+          id: '2',
+          timestamp: '2026-02-16T06:20:00.000Z',
+          commonName: 'Amsel',
+          scientificName: 'Turdus merula',
+          confidence: 0.8,
+          thumbnailUrl: null,
+          imageUrl: null,
+        },
+        {
+          id: '3',
+          timestamp: 'invalid-timestamp',
+          commonName: 'Buchfink',
+          scientificName: 'Fringilla coelebs',
+          confidence: 0.9,
+          thumbnailUrl: null,
+          imageUrl: null,
+        },
+      ],
+      error: null,
+    })
+
+    renderWithQuery(<StatisticsView />)
+
+    const cardsSection = screen
+      .getByRole('heading', { name: 'Statistiken' })
+      .closest('section') as HTMLElement
+    expect(within(cardsSection).getByText('3')).toBeInTheDocument()
+    expect(within(cardsSection).getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('73 %')).toBeInTheDocument()
+    expect(screen.getByText('Amsel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Amsel/ })).toBeInTheDocument()
+
+    expect(mocks.useArchiveDetections).toHaveBeenCalledTimes(1)
+    const [, , options] = mocks.useArchiveDetections.mock.calls[0]
+    expect(options.enabled).toBe(true)
   })
 })

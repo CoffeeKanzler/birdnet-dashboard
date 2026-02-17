@@ -43,7 +43,10 @@ const StatisticsView = ({ onSpeciesSelect }: StatisticsViewProps) => {
       enabled: Boolean(summaryError) && !isSummaryPending,
     })
 
-  const effectiveDetections = hasReadySummary ? [] : fallbackDetections
+  const effectiveDetections = useMemo(
+    () => (hasReadySummary ? [] : fallbackDetections),
+    [fallbackDetections, hasReadySummary],
+  )
   const effectiveError = summaryError ? fallbackError : null
   const effectiveIsLoading = (isSummaryLoading && !hasReadySummary) || isFallbackLoading
 

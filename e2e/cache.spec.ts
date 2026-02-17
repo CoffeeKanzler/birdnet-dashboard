@@ -1,19 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 import { installBirdnetApiMocks } from './support/mockBirdnet'
-
-const getCacheKeys = async (page: Page): Promise<string[]> => {
-  return page.evaluate(() => {
-    const keys: string[] = []
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('birdnet-day-cache-v1:')) {
-        keys.push(key)
-      }
-    }
-    return keys
-  })
-}
 
 test('statistics page loads using summary endpoint on first load', async ({ page }) => {
   await installBirdnetApiMocks(page)
@@ -35,7 +22,7 @@ test('statistics page loads using summary endpoint on first load', async ({ page
   expect(apiCallCount).toBeGreaterThan(0)
 })
 
-test('statistics page uses localStorage cache on reload (no API calls)', async ({ page }) => {
+test('statistics page reuses warm summary on reload (no detection API calls)', async ({ page }) => {
   await installBirdnetApiMocks(page)
 
   await page.goto('/?view=stats')
@@ -62,24 +49,39 @@ test('statistics page uses localStorage cache on reload (no API calls)', async (
 test('background warmer populates cache without blocking live view', async ({ page }) => {
   await installBirdnetApiMocks(page)
 
+  let summaryCalls = 0
+  let recentCalls = 0
+  page.on('request', (req) => {
+    if (req.url().includes('/api/v2/summary/30d')) {
+      summaryCalls += 1
+    }
+    if (req.url().includes('/api/v2/detections/recent')) {
+      recentCalls += 1
+    }
+  })
+
   await page.goto('/?view=landing')
   await expect(page.getByRole('heading', { name: 'Live' })).toBeVisible()
 
   await page.waitForTimeout(3000)
-
-  const cacheKeys = await getCacheKeys(page)
-  expect(cacheKeys.length).toBeGreaterThan(0)
+  expect(summaryCalls).toBeGreaterThan(0)
+  expect(recentCalls).toBeGreaterThan(0)
 })
 
 test('highlights page has cache keys available on first load', async ({ page }) => {
   await installBirdnetApiMocks(page)
 
+  let summaryCalls = 0
+  page.on('request', (req) => {
+    if (req.url().includes('/api/v2/summary/30d')) {
+      summaryCalls += 1
+    }
+  })
+
   await page.goto('/?view=rarity')
   await expect(page.getByRole('heading', { name: 'Top 10 Highlights' })).toBeVisible()
   await page.waitForLoadState('networkidle')
-
-  const cacheKeys = await getCacheKeys(page)
-  expect(cacheKeys.length).toBeGreaterThan(0)
+  expect(summaryCalls).toBeGreaterThan(0)
 })
 
 test('highlights page uses cache on reload (allows up to 2 API calls)', async ({ page }) => {

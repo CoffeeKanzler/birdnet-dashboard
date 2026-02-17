@@ -145,7 +145,6 @@ const paginate = <T>(items: T[], limit: number, offset: number): T[] => {
 
 const buildSummary30d = (detections: MockDetectionRecord[]) => {
   const now = new Date()
-  const windowEnd = new Date(now)
   const windowStart = new Date(now)
   windowStart.setDate(windowStart.getDate() - 29)
 
