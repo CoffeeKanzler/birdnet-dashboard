@@ -14,7 +14,8 @@ test('landing view loads and shows live detection cards', async ({ page }) => {
 
   const cardCount = await cards.count()
   expect(cardCount).toBeGreaterThanOrEqual(1)
-  expect(cardCount).toBeLessThanOrEqual(3)
+  // Grid is responsive: up to 3 (mobile), 6 (sm), or 9 (lg+) cards
+  expect(cardCount).toBeLessThanOrEqual(9)
 })
 
 test('landing card click navigates to species detail and back', async ({ page }) => {

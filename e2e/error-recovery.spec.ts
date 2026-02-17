@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test'
 
 test('archive view shows error and retries successfully', async ({ page }) => {
-  let requestCount = 0
+  // Fail all detection requests until the error banner is visible, then
+  // allow success. This avoids brittle request-count arithmetic that breaks
+  // when TanStack Query global retry settings interact with apiClient retries.
+  let shouldFail = true
 
   await page.route('**/api/rest_v1/page/summary/**', async (route) => {
     await route.fulfill({
@@ -34,13 +37,7 @@ test('archive view shows error and retries successfully', async ({ page }) => {
   })
 
   await page.route('**/api/v2/detections**', async (route) => {
-    requestCount += 1
-    // apiClient retries 503 once internally (2 attempts per query invocation).
-    // The archive view fires two separate queries: one on initial load (today's
-    // range) and one when "Letzte 7 Tage" is clicked (new range = new query key).
-    // Each query uses 2 requests (1 + apiClient retry). Total: 4 failing requests
-    // before the error stays visible for the 7-day range query.
-    if (requestCount <= 4) {
+    if (shouldFail) {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',
@@ -69,12 +66,11 @@ test('archive view shows error and retries successfully', async ({ page }) => {
   await page.goto('/?view=archive')
   await page.getByRole('button', { name: 'Letzte 7 Tage' }).click()
 
-  // Wait up to 15s: 4 failing requests × (300ms apiClient retry delay) + processing time
-  await expect(
-    page
-      .getByText(/BirdNET ist momentan nicht verfuegbar/)
-      .first(),
-  ).toBeVisible({ timeout: 15_000 })
+  const errorBanner = page.getByText(/BirdNET ist momentan nicht verfuegbar/).first()
+  await expect(errorBanner).toBeVisible({ timeout: 15_000 })
+
+  // Allow success before clicking retry
+  shouldFail = false
 
   const retryButton = page.getByRole('button', { name: 'Erneut versuchen' })
   await expect(retryButton).toBeVisible()
