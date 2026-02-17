@@ -34,6 +34,17 @@ describe('apiClient helpers', () => {
     expect(buildApiUrl('https://other.example/path', query)).toBe('https://other.example/path?limit=10')
   })
 
+  it('returns empty base URL for missing, invalid, and non-http env values', () => {
+    vi.stubEnv('VITE_BIRDNET_API_BASE_URL', '')
+    expect(getApiBaseUrl()).toBe('')
+
+    vi.stubEnv('VITE_BIRDNET_API_BASE_URL', 'http://[::1')
+    expect(getApiBaseUrl()).toBe('')
+
+    vi.stubEnv('VITE_BIRDNET_API_BASE_URL', 'javascript:alert(1)')
+    expect(getApiBaseUrl()).toBe('')
+  })
+
   it('returns JSON payload when request succeeds', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
     vi.stubGlobal('fetch', fetchMock)

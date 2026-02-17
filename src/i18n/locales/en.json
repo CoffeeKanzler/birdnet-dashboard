@@ -4,7 +4,6 @@
   "nav.archive": "Archive",
   "nav.highlights": "Highlights",
   "nav.stats": "Statistics",
-
   "stats.sectionLabel": "Overview",
   "stats.heading": "Statistics",
   "stats.description": "Precomputed global statistics across all processed detections.",
@@ -19,13 +18,11 @@
   "stats.loading": "Loading statistics...",
   "stats.loadingProgress": "Loading... {count} detections so far",
   "stats.sampleNote": "Based on {count} total processed detections.",
-
   "theme.activateLight": "Activate Light Theme",
   "theme.activateDark": "Activate Dark Theme",
   "theme.light": "Light",
   "theme.dark": "Dark",
   "scrollTop.label": "Scroll to top",
-
   "common.close": "Close",
   "common.refresh": "Refresh",
   "common.retry": "Retry",
@@ -42,7 +39,6 @@
   "common.detectionPlural": "Detections",
   "common.confidence": "Confidence {value}",
   "common.timezone": "Timezone: {zone}",
-
   "live.sectionLabel": "Live Highlights",
   "live.heading": "Live",
   "live.autoRefresh": "Auto-refreshes every 30 seconds.",
@@ -51,7 +47,6 @@
   "live.statusMinutesAgo": "{minutes} min ago",
   "live.statusHoursAgo": "{hours} h ago",
   "live.noDetections": "No detections yet.",
-
   "today.sectionLabel": "Today",
   "today.heading": "Today's Detections",
   "today.lastUpdated": "Last updated: {time}",
@@ -69,7 +64,6 @@
   "today.noFilteredList": "No detections match this filter.",
   "today.noDetectionsList": "No detections found.",
   "today.loading": "Loading detections from BirdNET-Go...",
-
   "archive.sectionLabel": "Archive",
   "archive.heading": "Detections in Date Range",
   "archive.description": "View detections outside of today.",
@@ -87,7 +81,6 @@
   "archive.quickToday": "Today",
   "archive.quickWeek": "Last 7 Days",
   "archive.quickMonth": "Last 30 Days",
-
   "rarity.periodLabel": "Period (Fixed)",
   "rarity.periodHeading": "Last 30 Days",
   "rarity.periodDescription": "The period is fixed to 30 days for better performance.",
@@ -103,7 +96,6 @@
   "rarity.matchCount": "{count} matches",
   "rarity.noHighlights": "No notable species found in this period.",
   "rarity.lastSeen": "Last seen: {date}",
-
   "notable.sectionLabel": "Local Notable Sightings",
   "notable.heading": "Notable Species in Range",
   "notable.curatedFor": "Curated for {region} · {range}",
@@ -111,7 +103,6 @@
   "notable.noResults": "No notable sightings found in this period.",
   "notable.whyNotable": "Why notable: {reasons}",
   "notable.lastSeen": "Last seen {date}",
-
   "species.sectionLabel": "Species Details",
   "species.familyLabel": "Family",
   "species.familyDescription": "Other detected species in the same family.",
@@ -127,14 +118,12 @@
   "species.rarityLabel": "Rarity: {value}",
   "species.familyBadge": "Family: {value}",
   "species.fallbackDescription": "{commonName} ({scientificName}) is recorded at this location. An editorial description will be added soon.",
-
   "rarity.veryRare": "very rare",
   "rarity.rare": "rare",
   "rarity.uncommon": "uncommon",
   "rarity.common": "common",
   "rarity.veryCommon": "very common",
   "rarity.unknown": "unknown",
-
   "attribution.footer": "Images sourced from Wikipedia/Wikimedia. Licensed under the respective terms specified there.",
   "attribution.linkLabel": "Image Credits",
   "attribution.modalLabel": "Image Credits",
@@ -155,7 +144,6 @@
   "attribution.wikimediaLink": "Wikimedia/Wikipedia",
   "attribution.licenseText": "License Text",
   "attribution.photoOf": "Photo of {name}",
-
   "error.accessDenied": "Access to {service} was denied.",
   "error.notFound": "{service} could not find the requested data.",
   "error.tooManyRequests": "Too many requests to {service}. Please try again in a moment.",
@@ -168,5 +156,8 @@
   "error.archiveLoad": "Failed to load archive detections",
   "error.speciesLoad": "Failed to load species detections.",
   "error.speciesPhotoLoad": "Failed to load species photo",
-  "error.familyLoad": "Failed to load species in this family."
+  "error.familyLoad": "Failed to load species in this family.",
+  "errorBoundary.heading": "Something went wrong",
+  "errorBoundary.description": "An unexpected error occurred while rendering this view.",
+  "errorBoundary.reload": "Reload page"
 }

@@ -78,7 +78,7 @@ const LiveHighlightCard = ({
     : t('attribution.showAttribution')
 
   return (
-    <article
+    <div
       className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50 shadow-sm dark:border-slate-700/80 dark:bg-slate-800 ${isInteractive ? 'cursor-pointer transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:hover:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300' : ''}`}
       onClick={isInteractive ? handleSelect : undefined}
       onKeyDown={
@@ -158,7 +158,7 @@ const LiveHighlightCard = ({
         </div>
         <p className="clamp-1 text-[0.7rem] text-slate-500 dark:text-slate-400 sm:text-xs">{scientificName}</p>
       </div>
-    </article>
+    </div>
   )
 }
 

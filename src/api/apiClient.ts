@@ -69,6 +69,15 @@ export const getApiBaseUrl = (): string => {
     return ''
   }
 
+  try {
+    const url = new URL(baseUrl, window.location.origin)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return ''
+    }
+  } catch {
+    return ''
+  }
+
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
 }
 

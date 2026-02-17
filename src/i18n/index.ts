@@ -31,7 +31,7 @@ export function t(key: TranslationKey, params?: Record<string, string | number>)
 
   if (params) {
     for (const [paramKey, paramValue] of Object.entries(params)) {
-      value = value.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramValue))
+      value = value.split(`{${paramKey}}`).join(String(paramValue))
     }
   }
 

@@ -8,6 +8,7 @@ import { renderWithQuery } from './test/renderWithQuery'
 const mocks = vi.hoisted(() => {
   return {
     getPhotoAttributionRecords: vi.fn<() => PhotoAttributionRecord[]>(() => []),
+    throwLandingView: false,
   }
 })
 
@@ -23,20 +24,28 @@ vi.mock('./features/landing/LandingView', () => ({
     onAttributionOpen: () => void
     onSpeciesSelect: (species: { commonName: string; scientificName: string }) => void
   }) => (
-    <div>
-      Landing View
-      <button
-        onClick={() => {
-          onSpeciesSelect({ commonName: 'Barn Owl', scientificName: 'Tyto alba' })
-        }}
-        type="button"
-      >
-        Select Barn Owl
-      </button>
-      <button onClick={onAttributionOpen} type="button">
-        Open Attribution From Landing
-      </button>
-    </div>
+    (() => {
+      if (mocks.throwLandingView) {
+        throw new Error('landing exploded')
+      }
+
+      return (
+        <div>
+          Landing View
+          <button
+            onClick={() => {
+              onSpeciesSelect({ commonName: 'Barn Owl', scientificName: 'Tyto alba' })
+            }}
+            type="button"
+          >
+            Select Barn Owl
+          </button>
+          <button onClick={onAttributionOpen} type="button">
+            Open Attribution From Landing
+          </button>
+        </div>
+      )
+    })()
   ),
 }))
 
@@ -133,6 +142,7 @@ describe('App navigation and URL state', () => {
   beforeEach(() => {
     mocks.getPhotoAttributionRecords.mockReset()
     mocks.getPhotoAttributionRecords.mockReturnValue([])
+    mocks.throwLandingView = false
     window.localStorage.clear()
     window.history.replaceState(null, '', '/')
   })
@@ -269,5 +279,49 @@ describe('App navigation and URL state', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
     expect(screen.queryByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeNull()
+  })
+
+  it('supports modal keyboard controls and focus trap', async () => {
+    mocks.getPhotoAttributionRecords.mockReturnValue([
+      {
+        commonName: 'Amsel',
+        scientificName: 'Turdus merula',
+        hasImage: true,
+        sourceUrl: 'https://example.test/source',
+        author: 'Tester',
+        license: 'CC BY-SA 4.0',
+        licenseUrl: 'https://example.test/license',
+      },
+    ])
+
+    renderWithQuery(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Bildnachweise' }))
+
+    const closeButton = screen.getByRole('button', { name: /Schlie/ })
+    await waitFor(() => {
+      expect(closeButton).toHaveFocus()
+    })
+
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })
+    expect(screen.getByRole('link', { name: 'Wikimedia-Quelle' })).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Tab' })
+    expect(closeButton).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeNull()
+    })
+  })
+
+  it('shows error boundary fallback when a view throws', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.throwLandingView = true
+
+    renderWithQuery(<App />)
+
+    expect(screen.getByText('Etwas ist schiefgelaufen')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Seite neu laden' })).toBeInTheDocument()
+    expect(errorSpy).toHaveBeenCalled()
   })
 })

@@ -17,7 +17,7 @@ const RECENT_REFRESH_MS = Number(process.env.RECENT_REFRESH_MS ?? `${15 * 60_000
 
 const securityHeaders = {
   'content-security-policy':
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: https://upload.wikimedia.org https://*.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'",
+    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: https://upload.wikimedia.org https://commons.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://en.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'",
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
   'referrer-policy': 'strict-origin-when-cross-origin',
@@ -30,7 +30,8 @@ const summaryCache = {
 }
 
 const INTERNAL_PROXY_HEADER = 'x-internal-summary-proxy'
-const INTERNAL_PROXY_VALUE = process.env.INTERNAL_PROXY_VALUE ?? '1'
+const INTERNAL_PROXY_VALUE =
+  process.env.INTERNAL_PROXY_VALUE ?? (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`)
 
 const toIsoDate = (value) => value.toISOString().slice(0, 10)
 

@@ -18,8 +18,14 @@ const offsetDays = (base: Date, days: number): Date => {
   return new Date(base.valueOf() + days * 24 * 60 * 60_000)
 }
 
-const buildDetections = (): MockDetectionRecord[] => {
+const REFERENCE_NOW = (() => {
   const now = new Date()
+  now.setUTCHours(12, 0, 0, 0)
+  return now
+})()
+
+const buildDetections = (): MockDetectionRecord[] => {
+  const now = new Date(REFERENCE_NOW)
 
   return [
     {
@@ -144,7 +150,7 @@ const paginate = <T>(items: T[], limit: number, offset: number): T[] => {
 }
 
 const buildSummary30d = (detections: MockDetectionRecord[]) => {
-  const now = new Date()
+  const now = new Date(REFERENCE_NOW)
   const windowStart = new Date(now)
   windowStart.setDate(windowStart.getDate() - 29)
 
