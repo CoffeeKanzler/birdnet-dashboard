@@ -74,3 +74,19 @@ test('deep link to species detail with from=rarity returns to rarity', async ({ 
   await expect(page).toHaveURL(/view=rarity/)
   await expect(page.getByRole('heading', { name: 'Top 10 Highlights' })).toBeVisible()
 })
+
+test('statistics view shows heading and summary cards', async ({ page }) => {
+  await installBirdnetApiMocks(page)
+
+  await page.goto('/?view=stats')
+  await expect(page.getByRole('heading', { name: 'Statistiken' })).toBeVisible()
+})
+
+test('statistics nav button routes to stats view', async ({ page }) => {
+  await installBirdnetApiMocks(page)
+
+  await page.goto('/?view=landing')
+  await page.getByRole('button', { name: 'Statistik' }).click()
+  await expect(page.getByRole('heading', { name: 'Statistiken' })).toBeVisible()
+  await expect(page).toHaveURL(/view=stats/)
+})

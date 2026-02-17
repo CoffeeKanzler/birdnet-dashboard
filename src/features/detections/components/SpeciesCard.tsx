@@ -41,10 +41,10 @@ const SpeciesCard = ({
 
   return (
     <article
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-within:ring-2 focus-within:ring-emerald-200 motion-safe:animate-[fadeUp_0.5s_ease] ${
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:bg-slate-800 dark:hover:border-slate-600 focus-within:ring-2 focus-within:ring-emerald-200 motion-safe:animate-[fadeUp_0.5s_ease] ${
         highlight
           ? 'border-emerald-200 ring-1 ring-emerald-100'
-          : 'border-slate-200'
+          : 'border-slate-200 dark:border-slate-700'
       } ${isInteractive ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300' : ''}`}
       onClick={isInteractive ? handleSelect : undefined}
       onKeyDown={
@@ -60,7 +60,7 @@ const SpeciesCard = ({
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         {photo ? (
           <img
             alt={t('attribution.photoOf', { name: commonName })}
@@ -101,7 +101,7 @@ const SpeciesCard = ({
         )}
         {photo?.sourceUrl ? (
           <button
-            className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm hover:bg-white"
+            className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-slate-400 dark:hover:bg-slate-900"
             onClick={(event) => {
               event.stopPropagation()
               onAttributionOpen?.()
@@ -116,20 +116,20 @@ const SpeciesCard = ({
       <div className="flex flex-1 flex-col gap-1.5 p-4 sm:p-5">
         <div>
           <p
-            className="text-base font-semibold leading-snug text-slate-900 break-words"
+            className="text-base font-semibold leading-snug text-slate-900 break-words dark:text-slate-100"
             title={commonName}
           >
             {commonName}
           </p>
           <p
-            className="text-xs text-slate-500 break-words"
+            className="text-xs text-slate-500 break-words dark:text-slate-400"
             title={scientificName}
           >
             {scientificName}
           </p>
         </div>
         {typeof count === 'number' ? (
-          <span className="mt-auto inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="mt-auto inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
             {t('common.detections', { count })}
           </span>
         ) : null}

@@ -27,8 +27,17 @@ RUN npm run build
 
 FROM nginx:alpine
 
+RUN apk add --no-cache nodejs
+
+WORKDIR /app
+
 COPY docker/nginx.main.conf /etc/nginx/nginx.conf
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY server /app/server
+COPY docker/start.sh /start.sh
+RUN chmod +x /start.sh
 
 EXPOSE 80
+
+CMD ["/start.sh"]

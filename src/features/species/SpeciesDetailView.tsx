@@ -60,11 +60,23 @@ const formatTimestamp = (value: string): string => {
 
 const formatConfidence = (value: number): string => {
   if (Number.isNaN(value)) {
-    return '0%'
+    return '0 %'
   }
 
   const percent = Math.round((value > 1 ? value : value * 100) * 10) / 10
-  return `${percent}%`
+  return `${percent} %`
+}
+
+const getConfidenceBadgeClassName = (value: number): string => {
+  if (value >= 0.8) {
+    return 'bg-emerald-500/15 text-emerald-500 dark:bg-emerald-500/25 dark:text-emerald-300'
+  }
+
+  if (value >= 0.5) {
+    return 'bg-amber-500/15 text-amber-500 dark:bg-amber-500/25 dark:text-amber-300'
+  }
+
+  return 'bg-rose-500/15 text-rose-500 dark:bg-rose-500/25 dark:text-rose-300'
 }
 
 const formatRarity = (value?: string) => {
@@ -458,17 +470,17 @@ const SpeciesDetailView = ({
   const descriptionLabel = useMemo(() => withUmlauts(description), [description])
 
   return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm sm:p-8">
+    <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90 sm:p-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
             {t('species.sectionLabel')}
           </p>
-          <h2 className="text-xl font-semibold text-slate-900">{commonName}</h2>
-          <p className="mt-1 text-sm text-slate-500">{scientificName}</p>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{commonName}</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{scientificName}</p>
         </div>
         <button
-          className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-200"
+          className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
           onClick={onBack}
           type="button"
         >
@@ -476,8 +488,8 @@ const SpeciesDetailView = ({
         </button>
       </header>
 
-      <div className="mt-5 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-start">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="mt-5 grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-start">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
           {photo ? (
             <img
               alt={t('attribution.photoOf', { name: commonName })}
@@ -491,13 +503,13 @@ const SpeciesDetailView = ({
           ) : isPhotoLoading ? (
             <div className="absolute inset-0 animate-pulse bg-slate-200" />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
               {t('common.noImage')}
             </div>
           )}
           {photo?.sourceUrl ? (
             <button
-              className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm hover:bg-white"
+              className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-slate-400 dark:hover:bg-slate-900"
               onClick={() => {
                 onAttributionOpen?.()
               }}
@@ -519,14 +531,14 @@ const SpeciesDetailView = ({
             </button>
           ) : null}
         </div>
-        <div className="text-sm text-slate-700">{descriptionLabel}</div>
+        <div className="text-sm text-slate-700 dark:text-slate-300">{descriptionLabel}</div>
       </div>
 
       {photo?.sourceUrl ? (
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           {t('attribution.sourceLabel')}{' '}
           <a
-            className="font-medium text-slate-700 underline-offset-2 hover:underline"
+            className="font-medium text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
             href={photo.sourceUrl}
             rel="noopener noreferrer"
             target="_blank"
@@ -540,7 +552,7 @@ const SpeciesDetailView = ({
               {' '}
               (
               <a
-                className="font-medium text-slate-700 underline-offset-2 hover:underline"
+                className="font-medium text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
                 href={photo.attribution.licenseUrl}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -559,7 +571,7 @@ const SpeciesDetailView = ({
             {t('species.rarityLabel', { value: formatRarity(speciesInfo.rarityStatus) })}
           </span>
           {speciesInfo.familyCommon ? (
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
               {t('species.familyBadge', { value: speciesInfo.familyCommon })}
             </span>
           ) : null}
@@ -567,25 +579,25 @@ const SpeciesDetailView = ({
       ) : null}
 
       {speciesInfo?.familyCommon ? (
-        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
             {t('species.familyLabel')}
           </p>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {t('species.familyDescription')}
           </p>
           {familyError ? (
             <p className="mt-3 text-sm text-rose-600">{familyError}</p>
           ) : familyMatches ? (
             familyMatches.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                 {t('species.familyEmpty')}
               </p>
             ) : (
               <div className="mt-3 flex flex-wrap gap-2">
                 {familyMatches.map((entry) => (
                   <button
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
                     key={`${entry.scientificName}-${entry.commonName}`}
                     onClick={() => {
                       onSpeciesSelect?.({
@@ -602,22 +614,22 @@ const SpeciesDetailView = ({
             )
           ) : null}
           {isFamilyLoading ? (
-            <p className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+            <p className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
               {t('species.familyLoading')}
             </p>
           ) : null}
         </div>
       ) : null}
 
-      <div className="mt-6 rounded-xl border border-slate-200">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
             {t('species.detectionsLabel')}
           </p>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-slate-500">{t('species.detectionsLoaded', { count: detections.length })}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('species.detectionsLoaded', { count: detections.length })}</p>
             <button
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
+              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               onClick={() => {
                 void refresh()
               }}
@@ -629,19 +641,19 @@ const SpeciesDetailView = ({
         </div>
 
         {isLoading ? (
-          <div className="px-4 py-6 text-sm text-slate-500">
+          <div className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">
             {t('species.detectionsLoading')}
           </div>
         ) : error ? (
           <div className="px-4 py-6 text-sm text-rose-600">{error}</div>
         ) : detections.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-slate-500">
+          <div className="px-4 py-6 text-sm text-slate-500 dark:text-slate-400">
             {t('species.detectionsEmpty')}
           </div>
         ) : (
           <div className="max-h-[60vh] overflow-y-auto">
-            <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+            <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm dark:divide-slate-700 dark:bg-slate-900">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-semibold" scope="col">
                     {t('species.timestampColumn')}
@@ -651,14 +663,18 @@ const SpeciesDetailView = ({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {detections.map((detection) => (
-                  <tr className="hover:bg-slate-50" key={detection.id}>
-                    <td className="px-4 py-3 text-slate-700">
+                  <tr className="hover:bg-slate-50 dark:hover:bg-slate-800" key={detection.id}>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                       {formatTimestamp(detection.timestamp)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {formatConfidence(detection.confidence)}
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getConfidenceBadgeClassName(detection.confidence)}`}
+                      >
+                        {formatConfidence(detection.confidence)}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -668,8 +684,8 @@ const SpeciesDetailView = ({
         )}
 
         {!isLoading && !error ? (
-          <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3">
-            <p className="text-xs text-slate-500">
+          <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {t('species.detectionsLimit')}
             </p>
           </div>

@@ -4,11 +4,13 @@ import { getPhotoAttributionRecords } from './api/birdImages'
 import { siteConfig } from './config/site'
 import { t } from './i18n'
 import DetectionsView from './features/detections/DetectionsView'
+import { useBackgroundCacheWarmer } from './features/detections/useBackgroundCacheWarmer'
 import LandingView from './features/landing/LandingView'
 import RarityView from './features/rarity/RarityView'
 import SpeciesDetailView from './features/species/SpeciesDetailView'
+import StatisticsView from './features/statistics/StatisticsView'
 
-type MainView = 'landing' | 'today' | 'archive' | 'rarity'
+type MainView = 'landing' | 'today' | 'archive' | 'rarity' | 'stats'
 type AppView = MainView | 'species'
 
 type SelectedSpecies = {
@@ -18,7 +20,7 @@ type SelectedSpecies = {
 
 type AppRouteState = {
   view: AppView
-  lastMainView: 'today' | 'archive' | 'rarity'
+  lastMainView: 'today' | 'archive' | 'rarity' | 'stats'
   selectedSpecies: SelectedSpecies | null
 }
 
@@ -44,7 +46,9 @@ const parseRouteState = (): AppRouteState => {
     const scientificName = params.get('scientific')?.trim() ?? ''
     const from = params.get('from')
     const lastMainView =
-      from === 'today' || from === 'archive' || from === 'rarity' ? from : 'today'
+      from === 'today' || from === 'archive' || from === 'rarity' || from === 'stats'
+        ? from
+        : 'today'
 
     if (commonName && scientificName) {
       return {
@@ -55,7 +59,7 @@ const parseRouteState = (): AppRouteState => {
     }
   }
 
-  if (routeView === 'today' || routeView === 'archive' || routeView === 'rarity') {
+  if (routeView === 'today' || routeView === 'archive' || routeView === 'rarity' || routeView === 'stats') {
     return {
       view: routeView,
       lastMainView: routeView,
@@ -89,7 +93,7 @@ const createRoute = (state: AppRouteState): string => {
 const App = () => {
   const initialState = parseRouteState()
   const [view, setView] = useState<AppView>(initialState.view)
-  const [lastMainView, setLastMainView] = useState<'today' | 'archive' | 'rarity'>(
+  const [lastMainView, setLastMainView] = useState<'today' | 'archive' | 'rarity' | 'stats'>(
     initialState.lastMainView,
   )
   const [selectedSpecies, setSelectedSpecies] = useState<SelectedSpecies | null>(
@@ -97,8 +101,11 @@ const App = () => {
   )
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
   const [isHeaderCondensed, setIsHeaderCondensed] = useState(false)
+  const [showScrollTop, setShowScrollTop] = useState(false)
   const [isAttributionOpen, setIsAttributionOpen] = useState(false)
   const [, setAttributionVersion] = useState(0)
+
+  useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
   const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
     const nextUrl = createRoute(state)
@@ -153,6 +160,7 @@ const App = () => {
   useEffect(() => {
     const handleScroll = () => {
       const y = window.scrollY
+      setShowScrollTop(y > 300)
       setIsHeaderCondensed((current) => {
         if (current) {
           return y > 24
@@ -173,11 +181,11 @@ const App = () => {
     setView(nextView)
 
     const nextLastMainView =
-      nextView === 'today' || nextView === 'archive' || nextView === 'rarity'
+      nextView === 'today' || nextView === 'archive' || nextView === 'rarity' || nextView === 'stats'
         ? nextView
         : lastMainView
 
-    if (nextView === 'today' || nextView === 'archive' || nextView === 'rarity') {
+    if (nextView === 'today' || nextView === 'archive' || nextView === 'rarity' || nextView === 'stats') {
       setLastMainView(nextView)
     }
 
@@ -195,7 +203,7 @@ const App = () => {
 
   const handleSpeciesSelect = (species: SelectedSpecies) => {
     const sourceView =
-      view === 'today' || view === 'archive' || view === 'rarity'
+      view === 'today' || view === 'archive' || view === 'rarity' || view === 'stats'
         ? view
         : lastMainView
 
@@ -234,32 +242,32 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen text-slate-900">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100">
       <header className="sticky top-0 z-30 px-4 pt-3 sm:px-6 sm:pt-4">
         <div
-          className={`mx-auto flex max-w-6xl flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 shadow-sm backdrop-blur transition-all sm:flex-row sm:items-center sm:justify-between ${
+          className={`mx-auto flex max-w-6xl flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 shadow-sm backdrop-blur transition-all dark:border-slate-700 dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between ${
             isHeaderCondensed ? 'p-3 sm:p-4' : 'p-4 sm:p-6'
           }`}
         >
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
               {siteConfig.siteSubtitle}
             </p>
             <h1 className="text-2xl font-semibold sm:text-3xl">
               {siteConfig.siteName}
             </h1>
             <p
-              className={`text-sm text-slate-500 transition-all ${
+              className={`text-sm text-slate-500 transition-all dark:text-slate-400 ${
                 isHeaderCondensed ? 'max-h-0 overflow-hidden opacity-0 sm:max-h-6 sm:opacity-100' : 'opacity-100'
               }`}
             >
               {siteConfig.siteTagline}
             </p>
           </div>
-          <div className="flex w-full items-stretch gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/80 p-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:w-auto sm:overflow-visible">
+          <div className="flex w-full items-stretch gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/80 p-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:w-auto sm:overflow-visible">
             <button
               aria-label={theme === 'dark' ? t('theme.activateLight') : t('theme.activateDark')}
-              className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               onClick={() => {
                 setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
               }}
@@ -299,8 +307,8 @@ const App = () => {
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
                 activeNavigationView === 'landing'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
               }`}
               onClick={() => handleViewChange('landing')}
               type="button"
@@ -310,8 +318,8 @@ const App = () => {
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
                 activeNavigationView === 'today'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
               }`}
               onClick={() => handleViewChange('today')}
               type="button"
@@ -321,8 +329,8 @@ const App = () => {
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
                 activeNavigationView === 'archive'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
               }`}
               onClick={() => handleViewChange('archive')}
               type="button"
@@ -332,13 +340,24 @@ const App = () => {
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
                 activeNavigationView === 'rarity'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
               }`}
               onClick={() => handleViewChange('rarity')}
               type="button"
             >
               {t('nav.highlights')}
+            </button>
+            <button
+              className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
+                activeNavigationView === 'stats'
+                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+              onClick={() => handleViewChange('stats')}
+              type="button"
+            >
+              {t('nav.stats')}
             </button>
           </div>
         </div>
@@ -363,6 +382,11 @@ const App = () => {
             onAttributionOpen={openAttribution}
             onSpeciesSelect={handleSpeciesSelect}
           />
+        ) : view === 'stats' ? (
+          <StatisticsView
+            onAttributionOpen={openAttribution}
+            onSpeciesSelect={handleSpeciesSelect}
+          />
         ) : (
           <DetectionsView
             onAttributionOpen={openAttribution}
@@ -371,11 +395,11 @@ const App = () => {
           />
         )}
 
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-slate-500 dark:text-slate-400">
           {t('attribution.footer')}
           {' '}
           <button
-            className="font-semibold text-slate-700 underline-offset-2 hover:underline"
+            className="font-semibold text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
             onClick={() => {
               setIsAttributionOpen(true)
             }}
@@ -386,20 +410,44 @@ const App = () => {
         </p>
       </main>
 
+      {showScrollTop ? (
+        <button
+          aria-label={t('scrollTop.label')}
+          className="fixed bottom-6 right-6 z-40 rounded-full border border-slate-200/80 bg-white/80 p-3 shadow-sm backdrop-blur transition hover:bg-white hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:bg-slate-900"
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path d="m6 14 6-6 6 6" />
+          </svg>
+        </button>
+      ) : null}
+
       {isAttributionOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
-          <div className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
                   {t('attribution.modalLabel')}
                 </p>
-                <h2 className="text-lg font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   {t('attribution.modalHeading')}
                 </h2>
               </div>
               <button
-                className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200"
+                className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-700"
                 onClick={() => {
                   setIsAttributionOpen(false)
                 }}
@@ -410,17 +458,17 @@ const App = () => {
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
-              <p className="mb-4 text-xs text-slate-500">
+              <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
                 {t('attribution.modalDescription')}
               </p>
               {attributionRecords.length === 0 ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {t('attribution.emptyState')}
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500">
+                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                  <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm dark:divide-slate-700 dark:bg-slate-900">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                       <tr>
                         <th className="px-3 py-3 font-semibold" scope="col">
                           {t('attribution.columnSpecies')}
@@ -436,24 +484,24 @@ const App = () => {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                       {attributionRecords.map((record) => (
                         <tr
                           className="align-top"
                           key={`${record.commonName}|${record.scientificName}|${record.sourceUrl || 'none'}`}
                         >
-                          <td className="px-3 py-3 text-xs text-slate-700">
-                            <p className="font-semibold text-slate-800">{record.commonName}</p>
-                            <p className="text-slate-500">{record.scientificName}</p>
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                            <p className="font-semibold text-slate-800 dark:text-slate-100">{record.commonName}</p>
+                            <p className="text-slate-500 dark:text-slate-400">{record.scientificName}</p>
                           </td>
-                          <td className="px-3 py-3 text-xs text-slate-700">
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
                             {record.author || record.credit || t('attribution.notSpecified')}
                           </td>
-                          <td className="px-3 py-3 text-xs text-slate-700">
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
                             {record.license ? (
                               record.licenseUrl ? (
                                 <a
-                                  className="font-medium text-slate-800 underline-offset-2 hover:underline"
+                                  className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
                                   href={record.licenseUrl}
                                   rel="noopener noreferrer"
                                   target="_blank"
@@ -467,10 +515,10 @@ const App = () => {
                               t('attribution.notSpecified')
                             )}
                           </td>
-                          <td className="px-3 py-3 text-xs text-slate-700">
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
                             {record.sourceUrl ? (
                               <a
-                                className="font-medium text-slate-800 underline-offset-2 hover:underline"
+                                className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
                                 href={record.sourceUrl}
                                 rel="noopener noreferrer"
                                 target="_blank"
@@ -478,7 +526,7 @@ const App = () => {
                                 {t('attribution.wikimediaSource')}
                               </a>
                             ) : (
-                              <span className="text-slate-500">{t('attribution.noImageLoaded')}</span>
+                              <span className="text-slate-500 dark:text-slate-400">{t('attribution.noImageLoaded')}</span>
                             )}
                           </td>
                         </tr>

@@ -143,6 +143,64 @@ const paginate = <T>(items: T[], limit: number, offset: number): T[] => {
   return items.slice(offset, offset + limit)
 }
 
+const buildSummary30d = (detections: MockDetectionRecord[]) => {
+  const now = new Date()
+  const windowEnd = new Date(now)
+  const windowStart = new Date(now)
+  windowStart.setDate(windowStart.getDate() - 29)
+
+  const startMs = windowStart.valueOf()
+  const endMs = new Date(now.valueOf() + 24 * 60 * 60_000).valueOf()
+
+  const inWindow = detections.filter((item) => {
+    const value = new Date(item.timestamp).valueOf()
+    return value >= startMs && value < endMs
+  })
+
+  const species = new Map<string, { common_name: string; scientific_name: string; count: number }>()
+  const hourlyBins = Array.from({ length: 24 }, () => 0)
+  let confidenceSum = 0
+
+  for (const item of inWindow) {
+    confidenceSum += item.confidence
+    const hour = new Date(item.timestamp).getHours()
+    if (hour >= 0 && hour < 24) {
+      hourlyBins[hour] += 1
+    }
+
+    const key = normalize(item.scientific_name)
+    const current = species.get(key)
+    if (current) {
+      current.count += 1
+    } else {
+      species.set(key, {
+        common_name: item.common_name,
+        scientific_name: item.scientific_name,
+        count: 1,
+      })
+    }
+  }
+
+  const groups = Array.from(species.values()).sort((a, b) => b.count - a.count)
+  const topSpecies = groups.slice(0, 10)
+
+  return {
+    generated_at: now.toISOString(),
+    window_start: toIso(windowStart).slice(0, 10),
+    window_end: toIso(now).slice(0, 10),
+    stats: {
+      total_detections: inWindow.length,
+      unique_species: species.size,
+      avg_confidence: inWindow.length > 0 ? (confidenceSum / inWindow.length) * 100 : 0,
+      hourly_bins: hourlyBins,
+      top_species: topSpecies,
+    },
+    archive: {
+      groups,
+    },
+  }
+}
+
 const fulfillJson = async (route: Route, payload: unknown, status = 200): Promise<void> => {
   await route.fulfill({
     status,
@@ -153,6 +211,7 @@ const fulfillJson = async (route: Route, payload: unknown, status = 200): Promis
 
 export const installBirdnetApiMocks = async (page: Page): Promise<void> => {
   const detections = buildDetections()
+  const summary = buildSummary30d(detections)
 
   await page.route('**/api/rest_v1/page/summary/**', async (route) => {
     await fulfillJson(route, { type: 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found' }, 404)
@@ -185,6 +244,10 @@ export const installBirdnetApiMocks = async (page: Page): Promise<void> => {
         source: 'mock',
       },
     })
+  })
+
+  await page.route('**/api/v2/summary/30d', async (route) => {
+    await fulfillJson(route, summary)
   })
 
   // Register generic detections route BEFORE the more specific recent route.

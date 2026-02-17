@@ -77,7 +77,7 @@ const LiveHighlightCard = ({
 
   return (
     <article
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50 shadow-sm ${isInteractive ? 'cursor-pointer transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300' : ''}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50 shadow-sm dark:border-slate-700/80 dark:bg-slate-800 ${isInteractive ? 'cursor-pointer transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:hover:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300' : ''}`}
       onClick={isInteractive ? handleSelect : undefined}
       onKeyDown={
         isInteractive
@@ -92,7 +92,7 @@ const LiveHighlightCard = ({
       role={isInteractive ? 'button' : undefined}
       tabIndex={isInteractive ? 0 : undefined}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         {photo ? (
           <img
             alt={t('attribution.photoOf', { name: commonName })}
@@ -133,7 +133,7 @@ const LiveHighlightCard = ({
         )}
         {photo?.sourceUrl ? (
           <button
-            className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm hover:bg-white"
+            className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm hover:bg-white dark:bg-slate-900/90 dark:text-slate-400 dark:hover:bg-slate-900"
             onClick={(event) => {
               event.stopPropagation()
               onAttributionOpen?.()
@@ -147,14 +147,14 @@ const LiveHighlightCard = ({
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="clamp-1 text-sm font-semibold text-slate-900 sm:text-base">
+          <h3 className="clamp-1 text-sm font-semibold text-slate-900 dark:text-slate-100 sm:text-base">
             {commonName}
           </h3>
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-emerald-700">
             {statusLabel}
           </span>
         </div>
-        <p className="clamp-1 text-[0.7rem] text-slate-500 sm:text-xs">{scientificName}</p>
+        <p className="clamp-1 text-[0.7rem] text-slate-500 dark:text-slate-400 sm:text-xs">{scientificName}</p>
       </div>
     </article>
   )
@@ -217,14 +217,14 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm sm:p-8">
+      <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90 sm:p-8">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
               {t('live.sectionLabel')}
             </p>
-            <h2 className="text-xl font-semibold text-slate-900">{t('live.heading')}</h2>
-            <p className="mt-1 text-xs text-slate-500">{t('live.autoRefresh')}</p>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{t('live.heading')}</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('live.autoRefresh')}</p>
           </div>
         </header>
 
@@ -232,7 +232,7 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
           {showSkeletonCards
             ? Array.from({ length: maxItems }, (_, index) => (
                 <div
-                  className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50"
+                  className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50 dark:border-slate-700/80 dark:bg-slate-800"
                   key={`landing-live-skeleton-${index}`}
                 >
                   <div className="aspect-[4/3] w-full animate-pulse bg-slate-200" />
@@ -252,7 +252,7 @@ const LandingView = ({ onSpeciesSelect, onAttributionOpen }: LandingViewProps) =
               )
               : latestDetections.length === 0
                 ? (
-                  <div className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
                     {t('live.noDetections')}
                   </div>
                 )

@@ -77,6 +77,26 @@ vi.mock('./features/rarity/RarityView', () => ({
   ),
 }))
 
+vi.mock('./features/statistics/StatisticsView', () => ({
+  default: ({
+    onSpeciesSelect,
+  }: {
+    onSpeciesSelect: (species: { commonName: string; scientificName: string }) => void
+  }) => (
+    <div>
+      Statistics View
+      <button
+        onClick={() => {
+          onSpeciesSelect({ commonName: 'Eisvogel', scientificName: 'Alcedo atthis' })
+        }}
+        type="button"
+      >
+        Select Eisvogel
+      </button>
+    </div>
+  ),
+}))
+
 vi.mock('./features/species/SpeciesDetailView', () => ({
   default: ({
     commonName,
@@ -131,6 +151,10 @@ describe('App navigation and URL state', () => {
     expect(screen.getByText('Rarity View')).toBeInTheDocument()
     expect(window.location.search).toBe('?view=rarity')
 
+    fireEvent.click(screen.getByRole('button', { name: 'Statistik' }))
+    expect(screen.getByText('Statistics View')).toBeInTheDocument()
+    expect(window.location.search).toBe('?view=stats')
+
     fireEvent.click(screen.getByRole('button', { name: 'Heute' }))
     expect(screen.getByText('Detections View: today')).toBeInTheDocument()
     expect(window.location.search).toBe('?view=today')
@@ -138,6 +162,23 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Live' }))
     expect(screen.getByText('Landing View')).toBeInTheDocument()
     expect(window.location.search).toBe('?view=landing')
+  })
+
+  it('navigates to stats view via deep link and supports back navigation from species', () => {
+    window.history.replaceState(null, '', '/?view=stats')
+
+    renderWithQuery(<App />)
+
+    expect(screen.getByText('Statistics View')).toBeInTheDocument()
+    expect(window.location.search).toBe('?view=stats')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select Eisvogel' }))
+    expect(window.location.search).toContain('view=species')
+    expect(window.location.search).toContain('from=stats')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
+    expect(screen.getByText('Statistics View')).toBeInTheDocument()
+    expect(window.location.search).toBe('?view=stats')
   })
 
   it('parses species route and returns to source view on back', () => {
