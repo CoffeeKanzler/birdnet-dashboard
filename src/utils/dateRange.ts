@@ -1,3 +1,6 @@
+import { siteConfig } from '../config/site'
+import { t } from '../i18n'
+
 const padDateValue = (value: number): string => value.toString().padStart(2, '0')
 
 export const toDateInputValue = (date: Date): string => {
@@ -28,10 +31,10 @@ export const parseDateInput = (value: string): Date | null => {
 export const formatDisplayDate = (value: string): string => {
   const parsed = parseDateInput(value)
   if (!parsed) {
-    return 'Unbekannt'
+    return t('common.unknown')
   }
 
-  return new Intl.DateTimeFormat('de-DE', {
+  return new Intl.DateTimeFormat(siteConfig.dateLocale, {
     dateStyle: 'medium',
   }).format(parsed)
 }

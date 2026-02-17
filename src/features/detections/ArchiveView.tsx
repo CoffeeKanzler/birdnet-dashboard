@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toDateInputValue, parseDateInput, formatDisplayDate } from '../../utils/dateRange'
 import { useArchiveDetections } from './useArchiveDetections'
 import SpeciesCard from './components/SpeciesCard'
+import { t } from '../../i18n'
 
 type ArchiveViewProps = {
   onSpeciesSelect?: (species: {
@@ -56,10 +57,10 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
 
   const rangeSummary = useMemo(() => {
     if (!startDate || !endDate) {
-      return 'Bitte einen Datumsbereich waehlen, um Erkennungen zu sehen.'
+      return t('archive.noRangeSelected')
     }
 
-    return `${formatDisplayDate(startDate)} bis ${formatDisplayDate(endDate)}`
+    return t('archive.rangeSummary', { start: formatDisplayDate(startDate), end: formatDisplayDate(endDate) })
   }, [startDate, endDate])
 
   const matchesFilter = useMemo(() => {
@@ -105,9 +106,9 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
         continue
       }
 
-      const commonName = detection.commonName?.trim() || 'Unbekannte Art'
+      const commonName = detection.commonName?.trim() || t('common.unknownSpecies')
       const scientificName =
-        detection.scientificName?.trim() || 'Unbekannte Art'
+        detection.scientificName?.trim() || t('common.unknownSpecies')
       if (!matchesFilter(commonName, scientificName)) {
         continue
       }
@@ -184,9 +185,9 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
   const startLabel = formatDisplayDate(startDate)
   const endLabel = formatDisplayDate(endDate)
   const quickRanges = [
-    { label: 'Heute', days: 1 },
-    { label: 'Letzte 7 Tage', days: 7 },
-    { label: 'Letzte 30 Tage', days: 30 },
+    { label: t('archive.quickToday'), days: 1 },
+    { label: t('archive.quickWeek'), days: 7 },
+    { label: t('archive.quickMonth'), days: 30 },
   ]
 
   return (
@@ -194,30 +195,30 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Archiv
+            {t('archive.sectionLabel')}
           </p>
           <h2 className="text-xl font-semibold text-slate-900">
-            Erkennungen im Datumsbereich
+            {t('archive.heading')}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Erkennungen ausserhalb von heute anzeigen.
+            {t('archive.description')}
           </p>
           <p className="mt-2 text-sm font-medium text-slate-700">
             {rangeSummary}
           </p>
           <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Zeitzone: {timezoneLabel}
+            {t('common.timezone', { zone: timezoneLabel })}
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Artenfilter
+            {t('today.speciesFilter')}
             <input
               className="w-56 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
               onChange={(event) => {
                 setSpeciesFilter(event.target.value)
               }}
-              placeholder="Artnamen eingeben"
+              placeholder={t('today.filterPlaceholder')}
               type="text"
               value={speciesFilter}
             />
@@ -242,7 +243,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
       {normalizedFilter ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
-            Filter: {speciesFilter.trim()}
+            {t('common.filter', { value: speciesFilter.trim() })}
           </span>
           <button
             className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
@@ -251,7 +252,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
             }}
             type="button"
           >
-            Leeren
+            {t('common.clear')}
           </button>
         </div>
       ) : null}
@@ -260,15 +261,15 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Benutzerdefinierter Zeitraum
+              {t('archive.customRange')}
             </p>
             <p className="mt-1 text-sm text-slate-500">
-              Start- und Enddatum waehlen.
+              {t('archive.selectDates')}
             </p>
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Startdatum
+              {t('archive.startDate')}
               <input
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
                 onChange={(event) => {
@@ -279,7 +280,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
               />
             </label>
             <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Enddatum
+              {t('archive.endDate')}
               <input
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
                 onChange={(event) => {
@@ -294,7 +295,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
             <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600">
               {startLabel}
             </span>
-            <span>bis</span>
+            <span>{t('common.to')}</span>
             <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600">
               {endLabel}
             </span>
@@ -304,23 +305,23 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Archiv-Übersicht
+              {t('archive.overviewLabel')}
             </p>
-            <p className="mt-1 text-sm text-slate-500">Nach Art gruppiert</p>
+            <p className="mt-1 text-sm text-slate-500">{t('today.groupedBySpecies')}</p>
           </div>
 
           <div className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
             {archiveGroups.length === 0 ? (
               <p className="text-sm text-slate-500">
                 {normalizedFilter
-                  ? 'Keine Erkennungen zum Zusammenfassen fuer diesen Filter.'
-                  : 'Keine Erkennungen zum Zusammenfassen in diesem Zeitraum.'}
+                  ? t('archive.noFilterSummary')
+                  : t('archive.noRangeSummary')}
               </p>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Erkennungen gesamt
+                    {t('today.totalDetections')}
                   </p>
                   <p className="mt-1 text-2xl font-semibold text-slate-900">
                     {totalDetections}
@@ -328,13 +329,13 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
                 </div>
                 <div className="text-right">
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Top-Art
+                    {t('today.topSpecies')}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
                     {topSpecies?.name}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {topSpecies?.count} Erkennungen
+                    {t('common.detections', { count: topSpecies?.count ?? 0 })}
                   </p>
                 </div>
               </div>
@@ -356,14 +357,14 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
                   }}
                   type="button"
                 >
-                  Erneut versuchen
+                  {t('common.retry')}
                 </button>
               </div>
             ) : archiveGroups.length === 0 ? (
               <div className="rounded-lg border border-dashed border-slate-200 bg-white px-4 py-4 text-sm text-slate-500">
                 {normalizedFilter
-                  ? 'Keine Erkennungen passen in diesem Zeitraum zu diesem Filter.'
-                  : 'Keine Erkennungen in diesem Zeitraum.'}
+                  ? t('archive.noFilteredRange')
+                  : t('archive.noDetectionsRange')}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import { getPhotoAttributionRecords } from './api/birdImages'
+import { siteConfig } from './config/site'
+import { t } from './i18n'
 import DetectionsView from './features/detections/DetectionsView'
 import LandingView from './features/landing/LandingView'
 import RarityView from './features/rarity/RarityView'
@@ -241,27 +243,27 @@ const App = () => {
         >
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              BirdNET-Go
+              {siteConfig.siteSubtitle}
             </p>
             <h1 className="text-2xl font-semibold sm:text-3xl">
-              BirdNET Dashboard
+              {siteConfig.siteName}
             </h1>
             <p
               className={`text-sm text-slate-500 transition-all ${
                 isHeaderCondensed ? 'max-h-0 overflow-hidden opacity-0 sm:max-h-6 sm:opacity-100' : 'opacity-100'
               }`}
             >
-              Live-Erkennungen aus der garden.
+              {siteConfig.siteTagline}
             </p>
           </div>
           <div className="flex w-full items-stretch gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/80 p-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:w-auto sm:overflow-visible">
             <button
-              aria-label={theme === 'dark' ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren'}
+              aria-label={theme === 'dark' ? t('theme.activateLight') : t('theme.activateDark')}
               className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               onClick={() => {
                 setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
               }}
-              title={theme === 'dark' ? 'Hell' : 'Dunkel'}
+              title={theme === 'dark' ? t('theme.light') : t('theme.dark')}
               type="button"
             >
               <span className="inline-flex items-center gap-2">
@@ -291,7 +293,7 @@ const App = () => {
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                   )}
                 </svg>
-                <span className="hidden sm:inline">{theme === 'dark' ? 'Hell' : 'Dunkel'}</span>
+                <span className="hidden sm:inline">{theme === 'dark' ? t('theme.light') : t('theme.dark')}</span>
               </span>
             </button>
             <button
@@ -303,7 +305,7 @@ const App = () => {
               onClick={() => handleViewChange('landing')}
               type="button"
             >
-              Live
+              {t('nav.live')}
             </button>
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
@@ -314,7 +316,7 @@ const App = () => {
               onClick={() => handleViewChange('today')}
               type="button"
             >
-              Heute
+              {t('nav.today')}
             </button>
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
@@ -325,7 +327,7 @@ const App = () => {
               onClick={() => handleViewChange('archive')}
               type="button"
             >
-              Archiv
+              {t('nav.archive')}
             </button>
             <button
               className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
@@ -336,7 +338,7 @@ const App = () => {
               onClick={() => handleViewChange('rarity')}
               type="button"
             >
-              Highlights
+              {t('nav.highlights')}
             </button>
           </div>
         </div>
@@ -370,7 +372,7 @@ const App = () => {
         )}
 
         <p className="text-center text-xs text-slate-500">
-          Bilder stammen aus Wikipedia/Wikimedia. Es gelten die jeweils dort angegebenen Lizenzbedingungen.
+          {t('attribution.footer')}
           {' '}
           <button
             className="font-semibold text-slate-700 underline-offset-2 hover:underline"
@@ -379,7 +381,7 @@ const App = () => {
             }}
             type="button"
           >
-            Bildnachweise
+            {t('attribution.linkLabel')}
           </button>
         </p>
       </main>
@@ -390,10 +392,10 @@ const App = () => {
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Bildnachweise
+                  {t('attribution.modalLabel')}
                 </p>
                 <h2 className="text-lg font-semibold text-slate-900">
-                  Wikimedia/Wikipedia Lizenzen
+                  {t('attribution.modalHeading')}
                 </h2>
               </div>
               <button
@@ -403,18 +405,17 @@ const App = () => {
                 }}
                 type="button"
               >
-                Schließen
+                {t('common.close')}
               </button>
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
               <p className="mb-4 text-xs text-slate-500">
-                Diese Liste zeigt aktuell geladene Bilder inklusive Urheber- und Lizenzhinweis.
+                {t('attribution.modalDescription')}
               </p>
               {attributionRecords.length === 0 ? (
                 <p className="text-sm text-slate-500">
-                  Noch keine Bildnachweise geladen. Sobald Artenbilder sichtbar sind,
-                  erscheinen hier automatisch Urheber- und Lizenzangaben.
+                  {t('attribution.emptyState')}
                 </p>
               ) : (
                 <div className="overflow-hidden rounded-xl border border-slate-200">
@@ -422,16 +423,16 @@ const App = () => {
                     <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500">
                       <tr>
                         <th className="px-3 py-3 font-semibold" scope="col">
-                          Art
+                          {t('attribution.columnSpecies')}
                         </th>
                         <th className="px-3 py-3 font-semibold" scope="col">
-                          Urheber
+                          {t('attribution.columnAuthor')}
                         </th>
                         <th className="px-3 py-3 font-semibold" scope="col">
-                          Lizenz
+                          {t('attribution.columnLicense')}
                         </th>
                         <th className="px-3 py-3 font-semibold" scope="col">
-                          Quelle
+                          {t('attribution.columnSource')}
                         </th>
                       </tr>
                     </thead>
@@ -446,7 +447,7 @@ const App = () => {
                             <p className="text-slate-500">{record.scientificName}</p>
                           </td>
                           <td className="px-3 py-3 text-xs text-slate-700">
-                            {record.author || record.credit || 'nicht angegeben'}
+                            {record.author || record.credit || t('attribution.notSpecified')}
                           </td>
                           <td className="px-3 py-3 text-xs text-slate-700">
                             {record.license ? (
@@ -463,7 +464,7 @@ const App = () => {
                                 record.license
                               )
                             ) : (
-                              'nicht angegeben'
+                              t('attribution.notSpecified')
                             )}
                           </td>
                           <td className="px-3 py-3 text-xs text-slate-700">
@@ -474,10 +475,10 @@ const App = () => {
                                 rel="noopener noreferrer"
                                 target="_blank"
                               >
-                                Wikimedia-Quelle
+                                {t('attribution.wikimediaSource')}
                               </a>
                             ) : (
-                              <span className="text-slate-500">Kein Bild geladen</span>
+                              <span className="text-slate-500">{t('attribution.noImageLoaded')}</span>
                             )}
                           </td>
                         </tr>

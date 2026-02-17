@@ -1,4 +1,5 @@
 import { ApiClientError } from '../api/apiClient'
+import { t } from '../i18n'
 
 const HTTP_STATUS_PATTERN = /(\d{3})/
 
@@ -8,22 +9,22 @@ const toServiceLabel = (serviceName?: string): string => {
 
 const messageForStatus = (status: number, serviceLabel: string): string => {
   if (status === 401 || status === 403) {
-    return `Zugriff auf ${serviceLabel} wurde verweigert.`
+    return t('error.accessDenied', { service: serviceLabel })
   }
 
   if (status === 404) {
-    return `${serviceLabel} konnte die angeforderten Daten nicht finden.`
+    return t('error.notFound', { service: serviceLabel })
   }
 
   if (status === 429) {
-    return `Zu viele Anfragen an ${serviceLabel}. Bitte in kurzem Abstand erneut versuchen.`
+    return t('error.tooManyRequests', { service: serviceLabel })
   }
 
   if (status >= 500) {
-    return `${serviceLabel} ist momentan nicht verfuegbar. Bitte spaeter erneut versuchen.`
+    return t('error.serverError', { service: serviceLabel })
   }
 
-  return `Anfrage an ${serviceLabel} ist fehlgeschlagen.`
+  return t('error.requestFailed', { service: serviceLabel })
 }
 
 const parseStatus = (error: Error): number | null => {
@@ -45,15 +46,15 @@ export const toUserErrorMessage = (
 
   if (error instanceof ApiClientError) {
     if (error.code === 'timeout') {
-      return `${serviceLabel} hat nicht rechtzeitig geantwortet. Bitte erneut versuchen.`
+      return t('error.timeout', { service: serviceLabel })
     }
 
     if (error.code === 'network') {
-      return `Verbindung zu ${serviceLabel} fehlgeschlagen. Bitte Netzwerk pruefen und erneut versuchen.`
+      return t('error.network', { service: serviceLabel })
     }
 
     if (error.code === 'parse') {
-      return `Antwort von ${serviceLabel} konnte nicht verarbeitet werden.`
+      return t('error.parse', { service: serviceLabel })
     }
 
     if (error.code === 'http' && typeof error.status === 'number') {

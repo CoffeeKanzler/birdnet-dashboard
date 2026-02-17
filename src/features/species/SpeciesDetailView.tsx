@@ -7,8 +7,10 @@ import {
   type SpeciesInfo,
 } from '../../api/birdnet'
 import { queryKeys } from '../../api/queryKeys'
+import { siteConfig } from '../../config/site'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
+import { getSpeciesData, t } from '../../i18n'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
@@ -42,7 +44,7 @@ const withUmlauts = (value: string): string => {
 
 const formatTimestamp = (value: string): string => {
   if (!value) {
-    return 'Unbekannte Zeit'
+    return t('common.unknownTime')
   }
 
   const parsed = new Date(value)
@@ -50,7 +52,7 @@ const formatTimestamp = (value: string): string => {
     return value
   }
 
-  return new Intl.DateTimeFormat('de-DE', {
+  return new Intl.DateTimeFormat(siteConfig.dateLocale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(parsed)
@@ -68,17 +70,17 @@ const formatConfidence = (value: number): string => {
 const formatRarity = (value?: string) => {
   switch (value) {
     case 'very_rare':
-      return 'sehr selten'
+      return t('rarity.veryRare')
     case 'rare':
-      return 'selten'
+      return t('rarity.rare')
     case 'uncommon':
-      return 'unregelmaessig'
+      return t('rarity.uncommon')
     case 'common':
-      return 'haeufig'
+      return t('rarity.common')
     case 'very_common':
-      return 'sehr haeufig'
+      return t('rarity.veryCommon')
     default:
-      return 'unbekannt'
+      return t('rarity.unknown')
   }
 }
 
@@ -398,7 +400,7 @@ const SpeciesDetailView = ({
       setFamilyError(
         toUserErrorMessage(
           caughtError,
-          'Arten dieser Familie konnten nicht geladen werden.',
+          t('error.familyLoad'),
           'BirdNET',
         ),
       )
@@ -421,6 +423,11 @@ const SpeciesDetailView = ({
   const description = useMemo(() => {
     const normalizedCommonName = normalize(commonName)
     const normalizedScientificName = normalize(scientificName)
+
+    const localeData = getSpeciesData(scientificName)
+    if (localeData.description) {
+      return localeData.description
+    }
 
     const matchingEntry = notableSpecies.find((species) => {
       const commonMatches = normalize(species.commonName) === normalizedCommonName
@@ -445,7 +452,7 @@ const SpeciesDetailView = ({
       return curatedDescription.description
     }
 
-    return `${commonName} (${scientificName}) ist an diesem Standort erfasst. Eine redaktionelle Kurzbeschreibung wird noch ergaenzt.`
+    return t('species.fallbackDescription', { commonName, scientificName })
   }, [commonName, scientificName])
 
   const descriptionLabel = useMemo(() => withUmlauts(description), [description])
@@ -455,7 +462,7 @@ const SpeciesDetailView = ({
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Art-Detail
+            {t('species.sectionLabel')}
           </p>
           <h2 className="text-xl font-semibold text-slate-900">{commonName}</h2>
           <p className="mt-1 text-sm text-slate-500">{scientificName}</p>
@@ -465,7 +472,7 @@ const SpeciesDetailView = ({
           onClick={onBack}
           type="button"
         >
-          Zurueck
+          {t('common.back')}
         </button>
       </header>
 
@@ -473,7 +480,7 @@ const SpeciesDetailView = ({
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white">
           {photo ? (
             <img
-              alt={`Foto von ${commonName}`}
+              alt={t('attribution.photoOf', { name: commonName })}
               className="h-full w-full object-cover"
               decoding="async"
               height={photo.height ?? FALLBACK_HEIGHT}
@@ -485,7 +492,7 @@ const SpeciesDetailView = ({
             <div className="absolute inset-0 animate-pulse bg-slate-200" />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Kein Bild
+              {t('common.noImage')}
             </div>
           )}
           {photo?.sourceUrl ? (
@@ -497,14 +504,14 @@ const SpeciesDetailView = ({
               title={
                 [
                   photo.attribution?.author
-                    ? `Urheber: ${photo.attribution.author}`
+                    ? t('attribution.author', { author: photo.attribution.author })
                     : null,
                   photo.attribution?.license
-                    ? `Lizenz: ${photo.attribution.license}`
+                    ? t('attribution.license', { license: photo.attribution.license })
                     : null,
                 ]
                   .filter(Boolean)
-                  .join(' · ') || 'Bildnachweis anzeigen'
+                  .join(' · ') || t('attribution.showAttribution')
               }
               type="button"
             >
@@ -517,17 +524,17 @@ const SpeciesDetailView = ({
 
       {photo?.sourceUrl ? (
         <p className="mt-3 text-xs text-slate-500">
-          Bildnachweis:{' '}
+          {t('attribution.sourceLabel')}{' '}
           <a
             className="font-medium text-slate-700 underline-offset-2 hover:underline"
             href={photo.sourceUrl}
             rel="noopener noreferrer"
             target="_blank"
           >
-            Wikimedia/Wikipedia
+            {t('attribution.wikimediaLink')}
           </a>
           {photo.attribution?.author ? `, ${photo.attribution.author}` : ''}
-          {photo.attribution?.license ? `, Lizenz ${photo.attribution.license}` : ''}
+          {photo.attribution?.license ? `, ${t('attribution.license', { license: photo.attribution.license })}` : ''}
           {photo.attribution?.licenseUrl ? (
             <>
               {' '}
@@ -538,7 +545,7 @@ const SpeciesDetailView = ({
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                Lizenztext
+                {t('attribution.licenseText')}
               </a>
               )
             </>
@@ -549,11 +556,11 @@ const SpeciesDetailView = ({
       {speciesInfo ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-            Seltenheit: {formatRarity(speciesInfo.rarityStatus)}
+            {t('species.rarityLabel', { value: formatRarity(speciesInfo.rarityStatus) })}
           </span>
           {speciesInfo.familyCommon ? (
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Familie: {speciesInfo.familyCommon}
+              {t('species.familyBadge', { value: speciesInfo.familyCommon })}
             </span>
           ) : null}
         </div>
@@ -562,17 +569,17 @@ const SpeciesDetailView = ({
       {speciesInfo?.familyCommon ? (
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Familie
+            {t('species.familyLabel')}
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            Weitere erkannte Arten derselben Familie.
+            {t('species.familyDescription')}
           </p>
           {familyError ? (
             <p className="mt-3 text-sm text-rose-600">{familyError}</p>
           ) : familyMatches ? (
             familyMatches.length === 0 ? (
               <p className="mt-3 text-sm text-slate-500">
-                Keine weiteren erkannten Arten in dieser Familie gefunden.
+                {t('species.familyEmpty')}
               </p>
             ) : (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -596,7 +603,7 @@ const SpeciesDetailView = ({
           ) : null}
           {isFamilyLoading ? (
             <p className="mt-3 text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
-              Weitere Familien-Arten werden im Hintergrund ergänzt ...
+              {t('species.familyLoading')}
             </p>
           ) : null}
         </div>
@@ -605,10 +612,10 @@ const SpeciesDetailView = ({
       <div className="mt-6 rounded-xl border border-slate-200">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Erkennungen dieser Art
+            {t('species.detectionsLabel')}
           </p>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-slate-500">Geladen: {detections.length}</p>
+            <p className="text-xs text-slate-500">{t('species.detectionsLoaded', { count: detections.length })}</p>
             <button
               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
               onClick={() => {
@@ -616,20 +623,20 @@ const SpeciesDetailView = ({
               }}
               type="button"
             >
-              Aktualisieren
+              {t('common.refresh')}
             </button>
           </div>
         </div>
 
         {isLoading ? (
           <div className="px-4 py-6 text-sm text-slate-500">
-            Erkennungen fuer diese Art werden geladen...
+            {t('species.detectionsLoading')}
           </div>
         ) : error ? (
           <div className="px-4 py-6 text-sm text-rose-600">{error}</div>
         ) : detections.length === 0 ? (
           <div className="px-4 py-6 text-sm text-slate-500">
-            Keine Erkennungen fuer diese Art gefunden.
+            {t('species.detectionsEmpty')}
           </div>
         ) : (
           <div className="max-h-[60vh] overflow-y-auto">
@@ -637,10 +644,10 @@ const SpeciesDetailView = ({
               <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                 <tr>
                   <th className="px-4 py-3 font-semibold" scope="col">
-                    Zeitpunkt
+                    {t('species.timestampColumn')}
                   </th>
                   <th className="px-4 py-3 font-semibold" scope="col">
-                    Sicherheit
+                    {t('species.confidenceColumn')}
                   </th>
                 </tr>
               </thead>
@@ -663,7 +670,7 @@ const SpeciesDetailView = ({
         {!isLoading && !error ? (
           <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3">
             <p className="text-xs text-slate-500">
-              Es werden bis zu 50 Erkennungen fuer diese Art geladen.
+              {t('species.detectionsLimit')}
             </p>
           </div>
         ) : null}

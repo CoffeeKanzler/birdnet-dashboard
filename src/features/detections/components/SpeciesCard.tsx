@@ -1,3 +1,4 @@
+import { t } from '../../../i18n'
 import { useSpeciesPhoto } from '../useSpeciesPhoto'
 
 type SpeciesCardProps = {
@@ -31,12 +32,12 @@ const SpeciesCard = ({
 
   const attributionTitle = photo?.attribution
     ? [
-        photo.attribution.author ? `Urheber: ${photo.attribution.author}` : null,
-        photo.attribution.license ? `Lizenz: ${photo.attribution.license}` : null,
+        photo.attribution.author ? t('attribution.author', { author: photo.attribution.author }) : null,
+        photo.attribution.license ? t('attribution.license', { license: photo.attribution.license }) : null,
       ]
         .filter(Boolean)
-        .join(' · ') || 'Bildnachweis anzeigen'
-    : 'Bildnachweis anzeigen'
+        .join(' · ') || t('attribution.showAttribution')
+    : t('attribution.showAttribution')
 
   return (
     <article
@@ -62,7 +63,7 @@ const SpeciesCard = ({
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {photo ? (
           <img
-            alt={`Foto von ${commonName}`}
+            alt={t('attribution.photoOf', { name: commonName })}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             decoding="async"
             height={height}
@@ -93,7 +94,7 @@ const SpeciesCard = ({
                 />
               </svg>
               <span className="text-xs font-semibold uppercase tracking-[0.3em]">
-                Kein Bild
+                {t('common.noImage')}
               </span>
             </div>
           </div>
@@ -129,7 +130,7 @@ const SpeciesCard = ({
         </div>
         {typeof count === 'number' ? (
           <span className="mt-auto inline-flex items-center self-start rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-            {count} Erkennungen
+            {t('common.detections', { count })}
           </span>
         ) : null}
       </div>
