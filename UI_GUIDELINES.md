@@ -4,7 +4,7 @@ These guidelines define the visual and interaction rules for `birdnet-showoff`.
 
 ## Product Tone
 
-- Audience: local neighborhood users, non-technical first.
+- Audience: local wildlife users, non-technical first.
 - Language: German in all visible UI copy.
 - Style: calm, nature-oriented, readable, trustworthy.
 - Goal: show bird detections fast, with minimal friction.
@@ -33,7 +33,7 @@ These guidelines define the visual and interaction rules for `birdnet-showoff`.
 
 ## Typography and Copy
 
-- Use clear German labels and proper umlauts (`local area`, `Übersicht`, etc.).
+- Use clear labels and proper locale-specific typography (for example `Übersicht` in German).
 - Avoid developer wording in UI (`query`, `endpoint`, `payload`, etc.).
 - Keep helper text short, one sentence when possible.
 - Prefer action labels over jargon:

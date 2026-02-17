@@ -89,11 +89,11 @@ Example:
 services:
   birdnet-showoff:
     build:
-      context: /opt/user/birdnet-dashboard-prod
-      dockerfile: /opt/user/birdnet-dashboard-prod/Dockerfile
+      context: /opt/birdnet-dashboard-prod
+      dockerfile: /opt/birdnet-dashboard-prod/Dockerfile
       args:
-        VITE_SITE_NAME: "BirdNET Dashboard"
-        VITE_SITE_TAGLINE: "Live-Erkennungen aus der garden."
+        VITE_SITE_NAME: "My Bird Dashboard"
+        VITE_SITE_TAGLINE: "Live detections from my garden."
         VITE_SITE_SUBTITLE: "BirdNET-Go"
         VITE_LOCALE: "de"
         VITE_DEFAULT_THEME: "system"
@@ -101,7 +101,7 @@ services:
       - SUMMARY_CACHE_FILE=/cache/summary-30d.json
       - RECENT_CACHE_FILE=/cache/recent-detections.json
     volumes:
-      - /opt/user/birdnet-dashboard-cache/prod:/cache
+      - /var/lib/birdnet-dashboard/cache/prod:/cache
 ```
 
 ## Proxy/API model
@@ -143,19 +143,15 @@ npm run test
 npm run test:e2e
 ```
 
-## Deploy workflow used in this repo
+## Deploy workflow
 
-Dev and prod are separate working directories:
-
-- Dev source: `/opt/user/birdnet-dashboard`
-- Prod source checkout: `/opt/user/birdnet-dashboard-prod`
-- Compose file: `/opt/user/homelab-compose.yml`
+Keep dev and prod in separate working directories.
 
 Typical release flow:
 
-1. Commit and push from `birdnet-dashboard`
+1. Commit and push from your dev checkout
 2. Tag release (`vX.Y.Z`)
-3. In `birdnet-dashboard-prod`, checkout that tag
+3. In your prod checkout, checkout that tag
 4. Rebuild/redeploy `birdnet-showoff` via compose
 
 ## Security notes

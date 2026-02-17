@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**BirdNET-Showoff** is a React SPA that visualizes bird species detections from a BirdNET-Go backend. It displays real-time and historical detections for a local neighborhood (local area) with species photos sourced from Wikipedia/Wikimedia. The entire UI is in German.
+**BirdNET Dashboard** is a React SPA that visualizes bird species detections from a BirdNET-Go backend. It displays real-time and historical detections with species photos sourced from Wikipedia/Wikimedia. The UI supports whitelabel deployments and multilingual content.
 
 ## Tech Stack
 

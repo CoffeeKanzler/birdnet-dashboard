@@ -8,14 +8,14 @@ This roadmap covers **whitelabel/i18n** (top priority), **feature improvements**
 
 ## Phase 1 – Whitelabel & Internationalization (top priority)
 
-The dashboard is currently hard-coded for a single German-language deployment ("BirdNET Dashboard"). Making it whitelabel-ready so anyone can deploy their own instance with their own branding and language is the primary goal.
+The dashboard is currently hard-coded for a single deployment profile. Making it whitelabel-ready so anyone can deploy their own instance with their own branding and language is the primary goal.
 
 ### 1a. Configuration-driven branding
 
-- **Problem:** Site name ("BirdNET Dashboard"), tagline ("Live-Erkennungen aus der garden."), and "BirdNET-Go" header label are hard-coded in `App.tsx`.
+- **Problem:** Site name, tagline, and "BirdNET-Go" header label are hard-coded in `App.tsx`.
 - **Action:** Extract all branding into a central config file (`src/config/site.ts` or environment variables):
   - `siteName` – e.g. "BirdNET Dashboard" or "My Garden Birds"
-  - `siteTagline` – e.g. "Live-Erkennungen aus der garden."
+  - `siteTagline` – e.g. "Live detections from my garden."
   - `siteSubtitle` – e.g. "BirdNET-Go"
   - `locale` – e.g. "de-DE" or "en-US"
   - `defaultTheme` – "light" | "dark" | "system"
