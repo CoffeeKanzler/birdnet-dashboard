@@ -89,6 +89,33 @@ body {
   color: #e2e8f0 !important;
 }
 
+/* Rose error banners */
+.dark .bg-rose-50 {
+  background-color: rgb(28 10 14) !important;
+}
+.dark .border-rose-200 {
+  border-color: #9f1239 !important;
+}
+.dark .text-rose-600 {
+  color: #fca5a5 !important;
+}
+.dark .hover\:bg-rose-100:hover {
+  background-color: rgb(40 16 20) !important;
+}
+
+/* No-photo gradient placeholder */
+.dark .from-slate-50 {
+  --tw-gradient-from: #0f172a;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.dark .via-slate-100 {
+  --tw-gradient-via: #1e293b;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to);
+}
+.dark .to-slate-200 {
+  --tw-gradient-to: #334155;
+}
+
 #root {
   min-height: 100vh;
 }
