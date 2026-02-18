@@ -2,11 +2,19 @@ name: ci
 
 on:
   push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -33,7 +41,12 @@ jobs:
       - name: Run lint
         run: npm run lint
 
-      - name: Run unit and integration tests
+      - name: Run unit tests (PR fast path)
+        if: github.event_name == 'pull_request'
+        run: npm test
+
+      - name: Run unit and integration tests with coverage (main)
+        if: github.event_name != 'pull_request'
         run: npm run test:coverage
 
       - name: Run build
@@ -68,4 +81,4 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E smoke tests
-        run: npm run test:e2e
+        run: npx playwright test e2e/smoke.spec.ts --project=chromium
