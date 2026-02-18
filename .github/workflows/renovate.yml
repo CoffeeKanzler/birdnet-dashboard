@@ -38,4 +38,3 @@ jobs:
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           configurationFile: renovate.json
-          renovate-version: 46
