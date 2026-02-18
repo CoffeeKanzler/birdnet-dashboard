@@ -159,7 +159,7 @@ export const requestJson = async <T>(
 
       try {
         return (await response.json()) as T
-      } catch (error) {
+      } catch {
         throw new ApiClientError({
           message: 'Response JSON parsing failed',
           code: 'parse',

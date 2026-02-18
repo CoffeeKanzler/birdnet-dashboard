@@ -49,7 +49,7 @@ type TodayViewProps = {
   lastUpdated: Date | null
   cacheMode: 'live' | 'stale' | 'unknown'
   refresh: () => Promise<void>
-  scrollContainerRef: RefObject<HTMLDivElement>
+  scrollContainerRef: RefObject<HTMLDivElement | null>
   onSpeciesSelect?: (species: {
     commonName: string
     scientificName: string
