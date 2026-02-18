@@ -369,7 +369,7 @@ const TodayView = ({
         ) : (
           <div
             className="max-h-[60vh] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700"
-            ref={scrollContainerRef}
+            ref={scrollContainerRef as RefObject<HTMLDivElement>}
           >
             <ul className="divide-y divide-slate-100 bg-white dark:divide-slate-700 dark:bg-slate-900">
               {filteredDetections.map((detection) => (

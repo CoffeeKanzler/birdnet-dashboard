@@ -28,6 +28,9 @@ const FAMILY_SPECIES_INFO_LOOKUP_CONCURRENCY = Number(
 const FAMILY_MATCH_CANDIDATE_LIMIT = Number(process.env.FAMILY_MATCH_CANDIDATE_LIMIT ?? '120')
 const FAMILY_RATE_LIMIT_COOLDOWN_MS = Number(process.env.FAMILY_RATE_LIMIT_COOLDOWN_MS ?? '60000')
 const FAMILY_MATCH_MAX_LIMIT = 50
+const CACHE_CONTROL_SUMMARY = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400'
+const CACHE_CONTROL_RECENT = 'public, max-age=15, s-maxage=60, stale-while-revalidate=120, stale-if-error=300'
+const CACHE_CONTROL_FAMILY = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400'
 
 const securityHeaders = {
   'content-security-policy':
@@ -777,7 +780,7 @@ const server = createServer(async (req, res) => {
           res.writeHead(upstream.status, {
             ...securityHeaders,
             'content-type': 'application/json; charset=utf-8',
-            'cache-control': 'no-store',
+            'cache-control': CACHE_CONTROL_RECENT,
             'x-detections-cache': 'live',
           })
           if (req.method !== 'HEAD') {
@@ -801,7 +804,7 @@ const server = createServer(async (req, res) => {
         res.writeHead(200, {
           ...securityHeaders,
           'content-type': 'application/json; charset=utf-8',
-          'cache-control': 'no-store',
+          'cache-control': CACHE_CONTROL_RECENT,
           'x-detections-cache': 'stale',
         })
         res.end()
@@ -809,6 +812,7 @@ const server = createServer(async (req, res) => {
       }
 
       json(res, 200, fallback, {
+        'cache-control': CACHE_CONTROL_RECENT,
         'x-detections-cache': 'stale',
       })
       return
@@ -885,13 +889,14 @@ const server = createServer(async (req, res) => {
           res.writeHead(200, {
             ...securityHeaders,
             'content-type': 'application/json; charset=utf-8',
-            'cache-control': 'no-store',
+            'cache-control': CACHE_CONTROL_SUMMARY,
             'x-summary-cache': 'fresh',
           })
           res.end()
           return
         }
         json(res, 200, state.payload, {
+          'cache-control': CACHE_CONTROL_SUMMARY,
           'x-summary-cache': 'fresh',
         })
         return
@@ -903,13 +908,14 @@ const server = createServer(async (req, res) => {
           res.writeHead(200, {
             ...securityHeaders,
             'content-type': 'application/json; charset=utf-8',
-            'cache-control': 'no-store',
+            'cache-control': CACHE_CONTROL_SUMMARY,
             'x-summary-cache': 'stale',
           })
           res.end()
           return
         }
         json(res, 200, state.payload, {
+          'cache-control': CACHE_CONTROL_SUMMARY,
           'x-summary-cache': 'stale',
         })
         return
@@ -979,7 +985,7 @@ const server = createServer(async (req, res) => {
           res.writeHead(200, {
             ...securityHeaders,
             'content-type': 'application/json; charset=utf-8',
-            'cache-control': 'no-store',
+            'cache-control': CACHE_CONTROL_FAMILY,
             'x-family-cache': 'fresh',
           })
           res.end()
@@ -987,6 +993,7 @@ const server = createServer(async (req, res) => {
         }
 
         json(res, 200, cachedPayload, {
+          'cache-control': CACHE_CONTROL_FAMILY,
           'x-family-cache': 'fresh',
         })
         return
@@ -1012,7 +1019,7 @@ const server = createServer(async (req, res) => {
             res.writeHead(200, {
               ...securityHeaders,
               'content-type': 'application/json; charset=utf-8',
-              'cache-control': 'no-store',
+              'cache-control': CACHE_CONTROL_FAMILY,
               'x-family-cache': 'stale',
             })
             res.end()
@@ -1020,6 +1027,7 @@ const server = createServer(async (req, res) => {
           }
 
           json(res, 200, cachedPayload, {
+            'cache-control': CACHE_CONTROL_FAMILY,
             'x-family-cache': 'stale',
           })
           return
@@ -1067,7 +1075,7 @@ const server = createServer(async (req, res) => {
         res.writeHead(200, {
           ...securityHeaders,
           'content-type': 'application/json; charset=utf-8',
-          'cache-control': 'no-store',
+          'cache-control': CACHE_CONTROL_FAMILY,
           'x-family-cache': 'fresh',
         })
         res.end()
@@ -1084,6 +1092,7 @@ const server = createServer(async (req, res) => {
             .slice(0, limit),
         },
         {
+          'cache-control': CACHE_CONTROL_FAMILY,
           'x-family-cache': 'fresh',
         },
       )

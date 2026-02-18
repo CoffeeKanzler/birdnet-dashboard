@@ -29,3 +29,4 @@ dist-ssr
 test-results/
 deploy-dev.sh
 .secrets/
+.githooks/

@@ -1,3 +1,5 @@
+import { getMockBirdnetJson } from '../demo/mockBirdnetApi'
+
 export type ApiClientErrorCode =
   | 'aborted'
   | 'timeout'
@@ -20,6 +22,7 @@ const DEFAULT_TIMEOUT_MS = 10_000
 const DEFAULT_RETRIES = 1
 const DEFAULT_RETRY_DELAY_MS = 300
 const RETRYABLE_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
+const isDemoMode = (): boolean => import.meta.env.VITE_DEMO_MODE === 'true'
 
 const isAbortError = (error: unknown): boolean => {
   return error instanceof Error && error.name === 'AbortError'
@@ -97,6 +100,21 @@ export const requestJson = async <T>(
   url: string,
   options: RequestJsonOptions = {},
 ): Promise<T> => {
+  if (isDemoMode()) {
+    const mock = getMockBirdnetJson(url)
+    if (mock) {
+      const response = new Response(JSON.stringify(mock.payload), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          ...mock.headers,
+        },
+      })
+      options.onResponse?.(response)
+      return mock.payload as T
+    }
+  }
+
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const retries = options.retries ?? DEFAULT_RETRIES
   const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS

@@ -55,6 +55,21 @@ describe('apiClient helpers', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('serves mock data without network calls in demo mode', async () => {
+    vi.stubEnv('VITE_DEMO_MODE', 'true')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const summary = await requestJson<{ stats: { total_detections: number } }>('/api/v2/summary/30d')
+    const detections = await requestJson<Array<{ scientific_name: string }>>(
+      '/api/v2/detections/recent?limit=5',
+    )
+
+    expect(summary.stats.total_detections).toBeGreaterThan(0)
+    expect(detections.length).toBeGreaterThan(0)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('retries retryable HTTP failures and then succeeds', async () => {
     const fetchMock = vi
       .fn()
