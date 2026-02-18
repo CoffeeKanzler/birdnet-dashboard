@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useDetections } from '../detections/useDetections'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
-import { t } from '../../i18n'
+import { getLocalizedCommonName, t } from '../../i18n'
 
 const useMediaQuery = (query: string): boolean => {
   const [matches, setMatches] = useState(
@@ -37,6 +37,7 @@ const LiveHighlightCard = ({
   onSelect,
   onAttributionOpen,
 }: LiveHighlightCardProps) => {
+  const displayCommonName = getLocalizedCommonName(commonName, scientificName)
   const { photo, isLoading } = useSpeciesPhoto(commonName, scientificName)
   const width = photo?.width ?? FALLBACK_WIDTH
   const height = photo?.height ?? FALLBACK_HEIGHT
@@ -65,7 +66,7 @@ const LiveHighlightCard = ({
   }, [cacheMode, timestamp])
 
   const handleSelect = () => {
-    onSelect?.({ commonName, scientificName })
+    onSelect?.({ commonName: displayCommonName, scientificName })
   }
 
   const attributionTitle = photo?.attribution
@@ -97,7 +98,7 @@ const LiveHighlightCard = ({
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         {photo ? (
           <img
-            alt={t('attribution.photoOf', { name: commonName })}
+            alt={t('attribution.photoOf', { name: displayCommonName })}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             decoding="async"
             height={height}
@@ -150,7 +151,7 @@ const LiveHighlightCard = ({
       <div className="flex flex-1 flex-col gap-2 p-5">
         <div className="flex items-center justify-between gap-2">
           <h3 className="clamp-1 text-sm font-semibold text-slate-900 dark:text-slate-100 sm:text-base">
-            {commonName}
+            {displayCommonName}
           </h3>
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-emerald-700">
             {statusLabel}

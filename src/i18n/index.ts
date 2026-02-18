@@ -86,3 +86,9 @@ export function getSpeciesData(scientificName: string): SpeciesData {
   const locale = speciesLocales[currentLocale] || speciesLocales['de']
   return locale[scientificName] || speciesLocales['de'][scientificName] || {}
 }
+
+export function getLocalizedCommonName(commonName: string, scientificName?: string): string {
+  const localeData = getSpeciesData(scientificName ?? '')
+  const localized = localeData.commonName?.trim()
+  return localized || commonName
+}

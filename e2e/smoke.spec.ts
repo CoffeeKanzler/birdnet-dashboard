@@ -17,7 +17,7 @@ test('today view shows friendly API error state', async ({ page }) => {
     })
   })
 
-  await page.goto('/?view=today')
+  await page.goto('/?view=today&lang=de')
   await expect(
     page
       .getByText('BirdNET ist momentan nicht verfuegbar. Bitte spaeter erneut versuchen.')
