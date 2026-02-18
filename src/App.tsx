@@ -124,9 +124,12 @@ const App = () => {
   const [isHeaderCondensed, setIsHeaderCondensed] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [isAttributionOpen, setIsAttributionOpen] = useState(false)
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false)
   const [, setAttributionVersion] = useState(0)
   const attributionDialogRef = useRef<HTMLDivElement | null>(null)
   const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
+  const creditsDialogRef = useRef<HTMLDivElement | null>(null)
+  const creditsCloseRef = useRef<HTMLButtonElement | null>(null)
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
@@ -280,7 +283,7 @@ const App = () => {
   }
 
   useEffect(() => {
-    if (!isAttributionOpen) {
+    if (!isAttributionOpen && !isCreditsOpen) {
       return
     }
 
@@ -297,7 +300,7 @@ const App = () => {
       document.body.style.overflow = previousOverflow
       document.body.style.paddingRight = previousPaddingRight
     }
-  }, [isAttributionOpen])
+  }, [isAttributionOpen, isCreditsOpen])
 
   useEffect(() => {
     if (!isAttributionOpen) {
@@ -348,6 +351,56 @@ const App = () => {
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [isAttributionOpen])
+
+  useEffect(() => {
+    if (!isCreditsOpen) {
+      return
+    }
+
+    creditsCloseRef.current?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setIsCreditsOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const dialog = creditsDialogRef.current
+      if (!dialog) {
+        return
+      }
+
+      const focusables = dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      )
+
+      if (focusables.length === 0) {
+        return
+      }
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isCreditsOpen])
 
   const activeNavigationView = view
   const openAttribution = () => {
@@ -538,6 +591,16 @@ const App = () => {
           >
             {t('attribution.linkLabel')}
           </button>
+          {' · '}
+          <button
+            className="font-semibold text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
+            onClick={() => {
+              setIsCreditsOpen(true)
+            }}
+            type="button"
+          >
+            {t('credits.linkLabel')}
+          </button>
         </p>
       </main>
       </ErrorBoundary>
@@ -681,6 +744,61 @@ const App = () => {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isCreditsOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsCreditsOpen(false)
+            }
+          }}
+        >
+          <div
+            aria-labelledby="credits-heading"
+            aria-modal="true"
+            className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            ref={creditsDialogRef}
+            role="dialog"
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
+                  {t('credits.modalLabel')}
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100" id="credits-heading">
+                  {t('credits.modalHeading')}
+                </h2>
+              </div>
+              <button
+                className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+                ref={creditsCloseRef}
+                onClick={() => {
+                  setIsCreditsOpen(false)
+                }}
+                type="button"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+            <div className="space-y-4 px-5 py-4 text-sm text-slate-700 dark:text-slate-300">
+              <p>{t('credits.modalDescription')}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{t('credits.backendTitle')}</p>
+                <p className="mt-2">{t('credits.backendDescription')}</p>
+                <a
+                  className="mt-2 inline-block font-semibold text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                  href="https://github.com/tphakala/birdnet-go"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {t('credits.backendLinkLabel')}
+                </a>
+              </div>
             </div>
           </div>
         </div>

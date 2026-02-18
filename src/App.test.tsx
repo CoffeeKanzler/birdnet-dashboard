@@ -355,6 +355,23 @@ describe('App navigation and URL state', () => {
     })
   })
 
+  it('opens project credits modal from footer', async () => {
+    renderWithQuery(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+
+    expect(screen.getByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeInTheDocument()
+    expect(screen.getByText('BirdNET-Go Backend')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'BirdNET-Go Repository oeffnen' })).toHaveAttribute(
+      'href',
+      'https://github.com/tphakala/birdnet-go',
+    )
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
+    })
+  })
+
   it('shows error boundary fallback when a view throws', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mocks.throwLandingView = true
