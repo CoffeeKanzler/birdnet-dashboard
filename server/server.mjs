@@ -664,6 +664,90 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost')
     const pathname = url.pathname
 
+    if (pathname === '/healthz') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD, OPTIONS',
+        })
+        res.end()
+        return
+      }
+      if (req.method === 'HEAD') {
+        res.writeHead(200, {
+          ...securityHeaders,
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        })
+        res.end()
+        return
+      }
+      json(res, 200, { status: 'ok' })
+      return
+    }
+
+    if (pathname === '/readyz') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD, OPTIONS',
+        })
+        res.end()
+        return
+      }
+      const summaryState = await getSummaryState()
+      const recent = await loadRecentFromDisk()
+      const ready = Boolean(summaryState.hasPayload && recent?.detections?.length)
+      const status = ready ? 200 : 503
+      if (req.method === 'HEAD') {
+        res.writeHead(status, {
+          ...securityHeaders,
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        })
+        res.end()
+        return
+      }
+      json(res, status, {
+        status: ready ? 'ready' : 'warming',
+      })
+      return
+    }
+
+    if (pathname === '/cachez') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD, OPTIONS',
+        })
+        res.end()
+        return
+      }
+      const summaryState = await getSummaryState()
+      const recent = await loadRecentFromDisk()
+      const payload = {
+        status: summaryState.hasPayload && recent ? 'healthy' : 'degraded',
+        summary: {
+          has_payload: summaryState.hasPayload,
+          fresh: summaryState.isFresh,
+        },
+        recent: {
+          has_payload: Boolean(recent),
+        },
+      }
+      if (req.method === 'HEAD') {
+        res.writeHead(payload.status === 'healthy' ? 200 : 503, {
+          ...securityHeaders,
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        })
+        res.end()
+        return
+      }
+      json(res, payload.status === 'healthy' ? 200 : 503, payload)
+      return
+    }
+
     if (req.headers[INTERNAL_PROXY_HEADER] !== INTERNAL_PROXY_VALUE) {
       json(res, 403, { message: 'forbidden' })
       return
