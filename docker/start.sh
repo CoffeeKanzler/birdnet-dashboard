@@ -15,4 +15,4 @@ fi
 
 su-exec nginx node /app/server/server.mjs &
 
-exec su-exec nginx /docker-entrypoint.sh nginx -g 'daemon off;'
+exec /docker-entrypoint.sh nginx -g 'daemon off;'
