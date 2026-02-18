@@ -188,6 +188,8 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select Eisvogel' }))
     expect(window.location.search).toContain('view=species')
     expect(window.location.search).toContain('from=stats')
+    expect(window.location.search).toContain('scientific=Alcedo+atthis')
+    expect(window.location.search).not.toContain('common=')
 
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
@@ -210,16 +212,16 @@ describe('App navigation and URL state', () => {
     expect(window.location.search).toContain('lang=en')
   })
 
-  it('parses species route and returns to source view on back', () => {
+  it('parses scientific-only species route and returns to source view on back', () => {
     window.history.replaceState(
       null,
       '',
-      '/?view=species&from=archive&common=Barn%20Owl&scientific=Tyto%20alba',
+      '/?view=species&from=archive&scientific=Tyto%20alba',
     )
 
     renderWithQuery(<App />)
 
-    expect(screen.getByText('Species Detail: Barn Owl (Tyto alba)')).toBeInTheDocument()
+    expect(screen.getByText('Species Detail: Tyto alba (Tyto alba)')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
 
@@ -247,6 +249,7 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select Barn Owl' }))
     expect(screen.getByText('Species Detail: Barn Owl (Tyto alba)')).toBeInTheDocument()
     expect(window.location.search).toContain('view=species')
+    expect(window.location.search).not.toContain('common=')
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Related Species' }))
     expect(screen.getByText('Species Detail: Song Thrush (Turdus philomelos)')).toBeInTheDocument()

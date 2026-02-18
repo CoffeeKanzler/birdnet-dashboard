@@ -17,15 +17,17 @@ const FAMILY_CACHE_FILE = process.env.FAMILY_CACHE_FILE ?? '/cache/family-matche
 const RECENT_SNAPSHOT_LIMIT = Number(process.env.RECENT_SNAPSHOT_LIMIT ?? '2000')
 const RECENT_REFRESH_MS = Number(process.env.RECENT_REFRESH_MS ?? `${15 * 60_000}`)
 const FAMILY_MATCH_TTL_MS = Number(process.env.FAMILY_MATCH_TTL_MS ?? `${60 * 60_000}`)
+const FAMILY_PARTIAL_MATCH_TTL_MS = Number(process.env.FAMILY_PARTIAL_MATCH_TTL_MS ?? `${5 * 60_000}`)
 const FAMILY_SPECIES_INFO_TTL_MS = Number(process.env.FAMILY_SPECIES_INFO_TTL_MS ?? `${24 * 60 * 60_000}`)
 const FAMILY_SPECIES_INFO_LOOKUP_BUDGET = Number(
-  process.env.FAMILY_SPECIES_INFO_LOOKUP_BUDGET ?? '10',
+  process.env.FAMILY_SPECIES_INFO_LOOKUP_BUDGET ?? '50',
 )
 const FAMILY_SPECIES_INFO_LOOKUP_CONCURRENCY = Number(
   process.env.FAMILY_SPECIES_INFO_LOOKUP_CONCURRENCY ?? '2',
 )
 const FAMILY_MATCH_CANDIDATE_LIMIT = Number(process.env.FAMILY_MATCH_CANDIDATE_LIMIT ?? '120')
 const FAMILY_RATE_LIMIT_COOLDOWN_MS = Number(process.env.FAMILY_RATE_LIMIT_COOLDOWN_MS ?? '60000')
+const FAMILY_MATCH_MAX_LIMIT = 50
 
 const securityHeaders = {
   'content-security-policy':
@@ -237,10 +239,9 @@ const toSpeciesEntry = (detection) => ({
 
 const normalizeScientificName = (value) => String(value ?? '').trim().toLowerCase()
 
-const buildFamilyCacheKey = ({ familyCommon, scientificName, limit }) => {
+const buildFamilyCacheKey = ({ familyCommon }) => {
   const familyTokens = tokenizeFamilyLabel(familyCommon)
-  const scientificKey = normalizeScientificName(scientificName)
-  return `${familyTokens.join('|')}::${scientificKey}::${limit}`
+  return `v2::${familyTokens.join('|')}`
 }
 
 const getFamilyCacheEntry = (key) => {
@@ -248,7 +249,8 @@ const getFamilyCacheEntry = (key) => {
   if (!entry) {
     return null
   }
-  if (Date.now() - entry.generatedAtMs < FAMILY_MATCH_TTL_MS) {
+  const ttlMs = entry.complete ? FAMILY_MATCH_TTL_MS : FAMILY_PARTIAL_MATCH_TTL_MS
+  if (Date.now() - entry.generatedAtMs < ttlMs) {
     return { status: 'fresh', entry }
   }
   return { status: 'stale', entry }
@@ -327,7 +329,7 @@ const fetchSpeciesFamilyFromUpstream = async (scientificName) => {
   return tokenizeFamilyLabel(payload?.taxonomy?.family_common)
 }
 
-const buildFamilyMatchesPayload = async ({ familyCommon, scientificName, limit }) => {
+const buildFamilyMatchesPayload = async ({ familyCommon, limit }) => {
   const familyTokens = tokenizeFamilyLabel(familyCommon)
   if (familyTokens.length === 0) {
     return {
@@ -342,7 +344,6 @@ const buildFamilyMatchesPayload = async ({ familyCommon, scientificName, limit }
     return null
   }
 
-  const ownScientificKey = normalizeScientificName(scientificName)
   const groups = Array.isArray(summaryState.payload?.archive?.groups)
     ? summaryState.payload.archive.groups
     : []
@@ -350,12 +351,13 @@ const buildFamilyMatchesPayload = async ({ familyCommon, scientificName, limit }
   const candidates = groups
     .filter((entry) => {
       const speciesKey = normalizeScientificName(entry?.scientific_name)
-      return speciesKey && speciesKey !== ownScientificKey
+      return speciesKey
     })
     .slice(0, FAMILY_MATCH_CANDIDATE_LIMIT)
 
   const matches = []
   const unresolved = []
+  let hitRateLimit = false
   for (const entry of candidates) {
     const scientific = String(entry?.scientific_name ?? '').trim()
     const common = String(entry?.common_name ?? '').trim()
@@ -402,6 +404,7 @@ const buildFamilyMatchesPayload = async ({ familyCommon, scientificName, limit }
           } catch (error) {
             if (error && typeof error === 'object' && 'status' in error && error.status === 429) {
               familyCache.rateLimitedUntilMs = Date.now() + FAMILY_RATE_LIMIT_COOLDOWN_MS
+              hitRateLimit = true
               return null
             }
             return null
@@ -430,9 +433,13 @@ const buildFamilyMatchesPayload = async ({ familyCommon, scientificName, limit }
     }
   }
 
+  const unresolvedExhausted = unresolved.length <= FAMILY_SPECIES_INFO_LOOKUP_BUDGET
+  const complete = !hitRateLimit && (matches.length >= limit || unresolvedExhausted)
+
   return {
     family_common: familyCommon,
     matches: matches.slice(0, limit),
+    complete,
   }
 }
 
@@ -955,11 +962,19 @@ const server = createServer(async (req, res) => {
       const limit = Math.min(parsePositiveInt(url.searchParams.get('limit'), 20), 50)
       const cacheKey = buildFamilyCacheKey({
         familyCommon,
-        scientificName,
-        limit,
       })
       const cachedState = getFamilyCacheEntry(cacheKey)
       if (cachedState?.status === 'fresh') {
+        const ownScientificKey = normalizeScientificName(scientificName)
+        const allMatches = Array.isArray(cachedState.entry.payload.matches)
+          ? cachedState.entry.payload.matches
+          : []
+        const cachedPayload = {
+          family_common: cachedState.entry.payload.family_common,
+          matches: allMatches
+            .filter((entry) => normalizeScientificName(entry?.scientificName) !== ownScientificKey)
+            .slice(0, limit),
+        }
         if (req.method === 'HEAD') {
           res.writeHead(200, {
             ...securityHeaders,
@@ -971,7 +986,7 @@ const server = createServer(async (req, res) => {
           return
         }
 
-        json(res, 200, cachedState.entry.payload, {
+        json(res, 200, cachedPayload, {
           'x-family-cache': 'fresh',
         })
         return
@@ -979,11 +994,20 @@ const server = createServer(async (req, res) => {
 
       const payload = await buildFamilyMatchesPayload({
         familyCommon,
-        scientificName,
-        limit,
+        limit: FAMILY_MATCH_MAX_LIMIT,
       })
       if (!payload) {
         if (cachedState?.entry?.payload) {
+          const ownScientificKey = normalizeScientificName(scientificName)
+          const allMatches = Array.isArray(cachedState.entry.payload.matches)
+            ? cachedState.entry.payload.matches
+            : []
+          const cachedPayload = {
+            family_common: cachedState.entry.payload.family_common,
+            matches: allMatches
+              .filter((entry) => normalizeScientificName(entry?.scientificName) !== ownScientificKey)
+              .slice(0, limit),
+          }
           if (req.method === 'HEAD') {
             res.writeHead(200, {
               ...securityHeaders,
@@ -995,7 +1019,7 @@ const server = createServer(async (req, res) => {
             return
           }
 
-          json(res, 200, cachedState.entry.payload, {
+          json(res, 200, cachedPayload, {
             'x-family-cache': 'stale',
           })
           return
@@ -1032,6 +1056,7 @@ const server = createServer(async (req, res) => {
         generatedAtMs: Date.now(),
         payload,
         matches: payload.matches,
+        complete: payload.complete === true,
       }
       familyCache.matchesByKey.set(cacheKey, cacheEntry)
       persistFamilyCacheToDisk().catch((error) => {
@@ -1049,9 +1074,19 @@ const server = createServer(async (req, res) => {
         return
       }
 
-      json(res, 200, payload, {
-        'x-family-cache': 'fresh',
-      })
+      json(
+        res,
+        200,
+        {
+          family_common: payload.family_common,
+          matches: payload.matches
+            .filter((entry) => normalizeScientificName(entry?.scientificName) !== normalizeScientificName(scientificName))
+            .slice(0, limit),
+        },
+        {
+          'x-family-cache': 'fresh',
+        },
+      )
       return
     }
     json(res, 404, { message: 'not found' })

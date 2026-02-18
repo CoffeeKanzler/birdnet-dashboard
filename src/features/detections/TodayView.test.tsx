@@ -6,6 +6,7 @@ import TodayView from './TodayView'
 
 vi.mock('../../i18n', () => ({
   t: (key: string) => key,
+  getLocalizedCommonName: (commonName: string) => commonName,
 }))
 
 vi.mock('./components/SpeciesCard', () => ({
