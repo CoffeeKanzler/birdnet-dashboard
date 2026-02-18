@@ -35,4 +35,5 @@ jobs:
         uses: renovatebot/github-action@v46.1.1
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
+          repository: CoffeeKanzler/birdnet-dashboard
           configurationFile: renovate.json
