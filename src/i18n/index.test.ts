@@ -45,7 +45,7 @@ describe('locale helpers', () => {
     expect(isSupportedLocale('fr')).toBe(false)
   })
 
-  it('resolves initial locale by precedence (url > storage > navigator > fallback)', () => {
+  it('resolves initial locale by precedence (url > storage > fallback > navigator)', () => {
     expect(
       resolveInitialLocale({
         urlLocale: 'en',
@@ -71,7 +71,7 @@ describe('locale helpers', () => {
         navigatorLocale: 'en-US',
         fallbackLocale: 'de',
       }),
-    ).toBe('en')
+    ).toBe('de')
   })
 })
 

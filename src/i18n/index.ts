@@ -52,12 +52,17 @@ export function resolveInitialLocale(options: {
     return fromStorage
   }
 
+  const fromFallback = normalizeLocale(options.fallbackLocale)
+  if (fromFallback) {
+    return fromFallback
+  }
+
   const fromNavigator = normalizeLocale(options.navigatorLocale)
   if (fromNavigator) {
     return fromNavigator
   }
 
-  return normalizeLocale(options.fallbackLocale) ?? 'de'
+  return 'de'
 }
 
 export function setLocale(locale: string): SupportedLocale {
