@@ -94,6 +94,7 @@
   "rarity.rangeError": "Failed to load detections for this range.",
   "rarity.highlightsLabel": "Highlights",
   "rarity.highlightsHeading": "Top 10 Highlights",
+  "rarity.scopeNote": "Highlights for this station location.",
   "rarity.highlightsDescription": "Notable species in the selected period.",
   "rarity.matchCount": "{count} matches",
   "rarity.noHighlights": "No notable species found in this period.",

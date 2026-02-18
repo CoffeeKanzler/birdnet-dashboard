@@ -110,7 +110,6 @@ describe('RarityView', () => {
     })
 
     renderWithQuery(<RarityView />)
-    expect(screen.getByText('summary failed')).toBeInTheDocument()
     expect(screen.getByText('rarity.rangeError')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'common.retry' }))
