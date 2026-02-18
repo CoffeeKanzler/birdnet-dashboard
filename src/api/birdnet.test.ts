@@ -1,6 +1,7 @@
 import {
   fetchDetections,
   fetchDetectionsPage,
+  fetchFamilyMatches,
   fetchRecentDetections,
   fetchDetectionsRangePage,
   fetchSpeciesDetectionsPage,
@@ -285,5 +286,44 @@ describe('birdnet api helpers', () => {
         message: 'Anfrage abgebrochen',
       }),
     )
+  })
+
+  it('fetches family matches from cached backend endpoint', async () => {
+    vi.stubEnv('VITE_BIRDNET_API_BASE_URL', 'https://api.example.test')
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        family_common: 'Drosseln and Spottdrosseln',
+        matches: [
+          {
+            commonName: 'Singdrossel',
+            scientificName: 'Turdus philomelos',
+          },
+          {
+            commonName: '',
+            scientificName: 'invalid',
+          },
+        ],
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await fetchFamilyMatches({
+      familyCommon: 'Drosseln and Spottdrosseln',
+      scientificName: 'Turdus merula',
+      limit: 7,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url] = fetchMock.mock.calls[0] as [string]
+    expect(url).toContain('/api/v2/family-matches?')
+    expect(url).toContain('familyCommon=Drosseln+and+Spottdrosseln')
+    expect(url).toContain('scientificName=Turdus+merula')
+    expect(url).toContain('limit=7')
+    expect(result).toEqual([
+      {
+        commonName: 'Singdrossel',
+        scientificName: 'Turdus philomelos',
+      },
+    ])
   })
 })
