@@ -45,6 +45,7 @@ vi.mock('./components/SpeciesCard', () => ({
 
 vi.mock('../../i18n', () => ({
   t: (key: string) => key,
+  getLocalizedCommonName: (commonName: string) => commonName,
 }))
 
 describe('ArchiveView', () => {

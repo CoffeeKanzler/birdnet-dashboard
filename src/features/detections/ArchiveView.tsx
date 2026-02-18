@@ -5,7 +5,7 @@ import { useArchiveDetections } from './useArchiveDetections'
 import SpeciesCard from './components/SpeciesCard'
 import RangeLoadingPanel from './components/RangeLoadingPanel'
 import { useSummary30d } from './useSummary30d'
-import { t } from '../../i18n'
+import { getLocalizedCommonName, t } from '../../i18n'
 
 type ArchiveViewProps = {
   onSpeciesSelect?: (species: {
@@ -113,16 +113,22 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
   const archiveGroups = useMemo(() => {
     if (shouldUseSummary && summary) {
       const filtered = summary.archive.groups.filter((group) =>
-        matchesFilter(group.commonName, group.scientificName),
+        matchesFilter(
+          getLocalizedCommonName(group.commonName, group.scientificName),
+          group.scientificName,
+        ),
       )
       return [...filtered].sort((a, b) => {
         if (b.count !== a.count) {
           return b.count - a.count
         }
-        return a.commonName.localeCompare(b.commonName)
+        return getLocalizedCommonName(a.commonName, a.scientificName).localeCompare(
+          getLocalizedCommonName(b.commonName, b.scientificName),
+        )
       }).map((group) => ({
         ...group,
-        key: `${group.scientificName}||${group.commonName}`,
+        commonName: getLocalizedCommonName(group.commonName, group.scientificName),
+        key: `${group.scientificName}||${getLocalizedCommonName(group.commonName, group.scientificName)}`,
       }))
     }
 
@@ -156,11 +162,12 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
       const commonName = detection.commonName?.trim() || t('common.unknownSpecies')
       const scientificName =
         detection.scientificName?.trim() || t('common.unknownSpecies')
-      if (!matchesFilter(commonName, scientificName)) {
+      const localizedCommonName = getLocalizedCommonName(commonName, scientificName)
+      if (!matchesFilter(localizedCommonName, scientificName)) {
         continue
       }
 
-      const key = `${scientificName}||${commonName}`
+      const key = `${scientificName}||${localizedCommonName}`
       const current = groups.get(key)
 
       if (current) {
@@ -168,7 +175,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
       } else {
         groups.set(key, {
           key,
-          commonName,
+          commonName: localizedCommonName,
           scientificName,
           count: 1,
         })

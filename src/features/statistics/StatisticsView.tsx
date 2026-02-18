@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { t } from '../../i18n'
+import { getLocalizedCommonName, t } from '../../i18n'
 import { useArchiveDetections } from '../detections/useArchiveDetections'
 import { useSummary30d } from '../detections/useSummary30d'
 import RangeLoadingPanel from '../detections/components/RangeLoadingPanel'
@@ -71,7 +71,10 @@ const StatisticsView = ({ onSpeciesSelect }: StatisticsViewProps) => {
 
   const topSpecies = useMemo(() => {
     if (hasReadySummary && summary) {
-      return summary.stats.topSpecies.slice(0, 10)
+      return summary.stats.topSpecies.slice(0, 10).map((species) => ({
+        ...species,
+        commonName: getLocalizedCommonName(species.commonName, species.scientificName),
+      }))
     }
 
     const counts = new Map<
@@ -84,7 +87,7 @@ const StatisticsView = ({ onSpeciesSelect }: StatisticsViewProps) => {
         existing.count++
       } else {
         counts.set(d.scientificName, {
-          commonName: d.commonName,
+          commonName: getLocalizedCommonName(d.commonName, d.scientificName),
           scientificName: d.scientificName,
           count: 1,
         })

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getPhotoAttributionRecords } from './api/birdImages'
 import ErrorBoundary from './components/ErrorBoundary'
 import { siteConfig } from './config/site'
-import { t } from './i18n'
+import { getLocale, isSupportedLocale, setLocale, t, type SupportedLocale } from './i18n'
 import DetectionsView from './features/detections/DetectionsView'
 import { useBackgroundCacheWarmer } from './features/detections/useBackgroundCacheWarmer'
 import LandingView from './features/landing/LandingView'
@@ -32,13 +32,12 @@ type NavItem = {
 }
 
 const THEME_STORAGE_KEY = 'birdnet-showoff-theme'
-const NAV_ITEMS: NavItem[] = [
-  { view: 'landing', label: t('nav.live') },
-  { view: 'today', label: t('nav.today') },
-  { view: 'archive', label: t('nav.archive') },
-  { view: 'rarity', label: t('nav.highlights') },
-  { view: 'stats', label: t('nav.stats') },
-]
+const LOCALE_STORAGE_KEY = 'birdnet-showoff-locale'
+
+const getRouteLocale = (): SupportedLocale | null => {
+  const locale = new URLSearchParams(window.location.search).get('lang')
+  return isSupportedLocale(locale) ? locale : null
+}
 
 const getInitialTheme = (): ThemeMode => {
   try {
@@ -66,11 +65,11 @@ const parseRouteState = (): AppRouteState => {
         ? from
         : 'today'
 
-    if (commonName && scientificName) {
+    if (scientificName) {
       return {
         view: 'species',
         lastMainView,
-        selectedSpecies: { commonName, scientificName },
+        selectedSpecies: { commonName: commonName || scientificName, scientificName },
       }
     }
   }
@@ -90,16 +89,19 @@ const parseRouteState = (): AppRouteState => {
   }
 }
 
-const createRoute = (state: AppRouteState): string => {
+const createRoute = (state: AppRouteState, locale: SupportedLocale, includeLocaleInRoute: boolean): string => {
   const params = new URLSearchParams()
 
   if (state.view === 'species' && state.selectedSpecies) {
     params.set('view', 'species')
     params.set('from', state.lastMainView)
-    params.set('common', state.selectedSpecies.commonName)
     params.set('scientific', state.selectedSpecies.scientificName)
   } else {
     params.set('view', state.view)
+  }
+
+  if (includeLocaleInRoute) {
+    params.set('lang', locale)
   }
 
   const query = params.toString()
@@ -107,6 +109,8 @@ const createRoute = (state: AppRouteState): string => {
 }
 
 const App = () => {
+  const [locale, setLocaleState] = useState<SupportedLocale>(() => getLocale())
+  const [includeLocaleInRoute, setIncludeLocaleInRoute] = useState<boolean>(() => getRouteLocale() !== null)
   const [initialState] = useState<AppRouteState>(() => parseRouteState())
   const [view, setView] = useState<AppView>(initialState.view)
   const [lastMainView, setLastMainView] = useState<'today' | 'archive' | 'rarity' | 'stats'>(
@@ -125,8 +129,16 @@ const App = () => {
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
+  const navItems: NavItem[] = [
+    { view: 'landing', label: t('nav.live') },
+    { view: 'today', label: t('nav.today') },
+    { view: 'archive', label: t('nav.archive') },
+    { view: 'rarity', label: t('nav.highlights') },
+    { view: 'stats', label: t('nav.stats') },
+  ]
+
   const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
-    const nextUrl = createRoute(state)
+    const nextUrl = createRoute(state, locale, includeLocaleInRoute)
     if (mode === 'push') {
       window.history.pushState(null, '', nextUrl)
       return
@@ -136,8 +148,8 @@ const App = () => {
   }
 
   useEffect(() => {
-    window.history.replaceState(null, '', createRoute(initialState))
-  }, [initialState])
+    window.history.replaceState(null, '', createRoute(initialState, locale, includeLocaleInRoute))
+  }, [initialState, includeLocaleInRoute, locale])
 
   useEffect(() => {
     const onAttributionUpdate = () => {
@@ -151,6 +163,15 @@ const App = () => {
   }, [])
 
   const attributionRecords = getPhotoAttributionRecords()
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+    try {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
+    } catch {
+      // no-op (storage may be unavailable in restricted contexts)
+    }
+  }, [locale])
 
   useEffect(() => {
     const root = document.documentElement
@@ -337,7 +358,7 @@ const App = () => {
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-slate-900 focus:shadow-lg"
         href="#main-content"
       >
-        Zum Inhalt springen
+        {t('common.skipToContent')}
       </a>
       <header className="sticky top-0 z-30 px-4 pt-3 sm:px-6 sm:pt-4">
         <div
@@ -362,8 +383,40 @@ const App = () => {
           </div>
           <div className="flex w-full items-stretch gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/80 p-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:w-auto sm:overflow-visible">
             <button
+              aria-label={t('common.language')}
+              className="inline-flex h-9 w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              onClick={() => {
+                const nextLocale: SupportedLocale = locale === 'de' ? 'en' : 'de'
+                setLocale(nextLocale)
+                setLocaleState(nextLocale)
+                setIncludeLocaleInRoute(true)
+              }}
+              title={t('common.language')}
+              type="button"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <svg
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M2 12h20" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                <span aria-hidden="true" className="font-mono text-[0.68rem] leading-none">
+                  {locale.toUpperCase()}
+                </span>
+              </span>
+            </button>
+            <button
               aria-label={theme === 'dark' ? t('theme.activateLight') : t('theme.activateDark')}
-              className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              className="inline-flex h-9 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               onClick={() => {
                 setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
               }}
@@ -397,15 +450,14 @@ const App = () => {
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                   )}
                 </svg>
-                <span className="hidden sm:inline">{theme === 'dark' ? t('theme.light') : t('theme.dark')}</span>
               </span>
             </button>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <button
-                className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
+                className={`inline-flex h-9 w-[6.75rem] shrink-0 items-center justify-center rounded-xl border px-3 py-2 text-[0.65rem] transition sm:w-[6.5rem] ${
                   activeNavigationView === item.view
                     ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                    : 'border-slate-200 bg-white/70 text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'
                 }`}
                 key={item.view}
                 onClick={() => handleViewChange(item.view)}

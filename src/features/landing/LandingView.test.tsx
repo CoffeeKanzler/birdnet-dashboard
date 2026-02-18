@@ -19,6 +19,7 @@ vi.mock('../detections/useSpeciesPhoto', () => ({
 
 vi.mock('../../i18n', () => ({
   t: (key: string) => key,
+  getLocalizedCommonName: (commonName: string) => commonName,
 }))
 
 describe('LandingView', () => {
