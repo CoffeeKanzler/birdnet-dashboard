@@ -13,6 +13,7 @@ const localeMap: Record<string, string> = {
 
 const locale = import.meta.env.VITE_LOCALE || 'de'
 const dateLocale = localeMap[locale] || 'de-DE'
+const enableHighlights = import.meta.env.VITE_ENABLE_HIGHLIGHTS !== 'false'
 
 export const siteConfig = {
   siteName: import.meta.env.VITE_SITE_NAME || 'BirdNET Dashboard',
@@ -22,4 +23,5 @@ export const siteConfig = {
   dateLocale,
   defaultTheme: (import.meta.env.VITE_DEFAULT_THEME as 'light' | 'dark' | 'system') || 'system',
   appVersion: import.meta.env.VITE_APP_VERSION || '',
+  enableHighlights,
 } as const

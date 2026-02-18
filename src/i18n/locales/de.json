@@ -94,6 +94,7 @@
   "rarity.rangeError": "Erkennungen fuer den Zeitraum konnten nicht geladen werden.",
   "rarity.highlightsLabel": "Highlights",
   "rarity.highlightsHeading": "Top 10 Highlights",
+  "rarity.scopeNote": "Highlights fuer diesen Stationsstandort.",
   "rarity.highlightsDescription": "Auffällige Arten im gewählten Zeitraum.",
   "rarity.matchCount": "{count} Treffer",
   "rarity.noHighlights": "Keine besonderen Arten in diesem Zeitraum gefunden.",

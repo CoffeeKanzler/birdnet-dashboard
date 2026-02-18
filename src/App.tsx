@@ -33,6 +33,7 @@ type NavItem = {
 
 const THEME_STORAGE_KEY = 'birdnet-showoff-theme'
 const LOCALE_STORAGE_KEY = 'birdnet-showoff-locale'
+const HIGHLIGHTS_ENABLED = siteConfig.enableHighlights
 
 const getRouteLocale = (): SupportedLocale | null => {
   const locale = new URLSearchParams(window.location.search).get('lang')
@@ -60,10 +61,9 @@ const parseRouteState = (): AppRouteState => {
     const commonName = params.get('common')?.trim() ?? ''
     const scientificName = params.get('scientific')?.trim() ?? ''
     const from = params.get('from')
-    const lastMainView =
-      from === 'today' || from === 'archive' || from === 'rarity' || from === 'stats'
-        ? from
-        : 'today'
+    const requestedFrom =
+      from === 'today' || from === 'archive' || from === 'rarity' || from === 'stats' ? from : 'today'
+    const lastMainView = !HIGHLIGHTS_ENABLED && requestedFrom === 'rarity' ? 'today' : requestedFrom
 
     if (scientificName) {
       return {
@@ -75,9 +75,10 @@ const parseRouteState = (): AppRouteState => {
   }
 
   if (routeView === 'today' || routeView === 'archive' || routeView === 'rarity' || routeView === 'stats') {
+    const normalizedView = !HIGHLIGHTS_ENABLED && routeView === 'rarity' ? 'today' : routeView
     return {
-      view: routeView,
-      lastMainView: routeView,
+      view: normalizedView,
+      lastMainView: normalizedView,
       selectedSpecies: null,
     }
   }
@@ -129,13 +130,14 @@ const App = () => {
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
-  const navItems: NavItem[] = [
+  const allNavItems: NavItem[] = [
     { view: 'landing', label: t('nav.live') },
     { view: 'today', label: t('nav.today') },
     { view: 'archive', label: t('nav.archive') },
     { view: 'rarity', label: t('nav.highlights') },
     { view: 'stats', label: t('nav.stats') },
   ]
+  const navItems: NavItem[] = allNavItems.filter((item) => HIGHLIGHTS_ENABLED || item.view !== 'rarity')
 
   const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
     const nextUrl = createRoute(state, locale, includeLocaleInRoute)
