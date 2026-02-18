@@ -12,13 +12,26 @@ permissions:
 
 jobs:
   renovate:
-    if: ${{ secrets.RENOVATE_TOKEN != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Check token presence
+        id: token_check
+        run: |
+          if [ -n "${{ secrets.RENOVATE_TOKEN }}" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip when token missing
+        if: steps.token_check.outputs.has_token != 'true'
+        run: echo "RENOVATE_TOKEN is not configured; skipping run."
+
       - name: Run Renovate
+        if: steps.token_check.outputs.has_token == 'true'
         uses: renovatebot/github-action@v43
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
