@@ -28,13 +28,16 @@ const FAMILY_SPECIES_INFO_LOOKUP_CONCURRENCY = Number(
 const FAMILY_MATCH_CANDIDATE_LIMIT = Number(process.env.FAMILY_MATCH_CANDIDATE_LIMIT ?? '120')
 const FAMILY_RATE_LIMIT_COOLDOWN_MS = Number(process.env.FAMILY_RATE_LIMIT_COOLDOWN_MS ?? '60000')
 const FAMILY_MATCH_MAX_LIMIT = 50
+const FAMILY_COMMON_MAX_LENGTH = Number(process.env.FAMILY_COMMON_MAX_LENGTH ?? '120')
+const FAMILY_CACHE_MAX_ENTRIES = Number(process.env.FAMILY_CACHE_MAX_ENTRIES ?? '500')
 const CACHE_CONTROL_SUMMARY = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400'
 const CACHE_CONTROL_RECENT = 'public, max-age=15, s-maxage=60, stale-while-revalidate=120, stale-if-error=300'
 const CACHE_CONTROL_FAMILY = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400'
+const CONTENT_SECURITY_POLICY =
+  "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: https://upload.wikimedia.org https://commons.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://en.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'"
 
 const securityHeaders = {
-  'content-security-policy':
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: https://upload.wikimedia.org https://*.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'",
+  'content-security-policy': CONTENT_SECURITY_POLICY,
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
   'referrer-policy': 'strict-origin-when-cross-origin',
@@ -53,7 +56,10 @@ const familyCache = {
 }
 
 const INTERNAL_PROXY_HEADER = 'x-internal-summary-proxy'
-const INTERNAL_PROXY_VALUE = process.env.INTERNAL_PROXY_VALUE ?? '1'
+const INTERNAL_PROXY_VALUE = process.env.INTERNAL_PROXY_VALUE
+if (!INTERNAL_PROXY_VALUE || INTERNAL_PROXY_VALUE.length < 32) {
+  throw new Error('INTERNAL_PROXY_VALUE is required and must be at least 32 characters')
+}
 
 const toIsoDate = (value) => value.toISOString().slice(0, 10)
 
@@ -146,6 +152,24 @@ const loadFamilyCacheFromDisk = async () => {
     console.error('family cache read failed', error)
     return null
   }
+}
+
+const pruneFamilyCache = () => {
+  while (familyCache.matchesByKey.size > FAMILY_CACHE_MAX_ENTRIES) {
+    const oldestKey = familyCache.matchesByKey.keys().next().value
+    if (!oldestKey) {
+      break
+    }
+    familyCache.matchesByKey.delete(oldestKey)
+  }
+}
+
+const setFamilyCacheEntry = (cacheKey, entry) => {
+  if (familyCache.matchesByKey.has(cacheKey)) {
+    familyCache.matchesByKey.delete(cacheKey)
+  }
+  familyCache.matchesByKey.set(cacheKey, entry)
+  pruneFamilyCache()
 }
 
 const persistFamilyCacheToDisk = async () => {
@@ -588,7 +612,7 @@ const bootstrapCaches = async () => {
       if (!entry?.cacheKey || !Array.isArray(entry?.matches) || !entry?.generatedAtMs) {
         continue
       }
-      familyCache.matchesByKey.set(entry.cacheKey, entry)
+      setFamilyCacheEntry(entry.cacheKey, entry)
     }
   }
 
@@ -964,6 +988,10 @@ const server = createServer(async (req, res) => {
         json(res, 400, { message: 'family_common_required' })
         return
       }
+      if (familyCommon.length > FAMILY_COMMON_MAX_LENGTH) {
+        json(res, 400, { message: 'family_common_too_long' })
+        return
+      }
       const scientificName = String(url.searchParams.get('scientificName') ?? '').trim()
       const limit = Math.min(parsePositiveInt(url.searchParams.get('limit'), 20), 50)
       const cacheKey = buildFamilyCacheKey({
@@ -1066,7 +1094,7 @@ const server = createServer(async (req, res) => {
         matches: payload.matches,
         complete: payload.complete === true,
       }
-      familyCache.matchesByKey.set(cacheKey, cacheEntry)
+      setFamilyCacheEntry(cacheKey, cacheEntry)
       persistFamilyCacheToDisk().catch((error) => {
         console.error('family cache persist failed', error)
       })
