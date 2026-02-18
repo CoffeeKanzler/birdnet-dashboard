@@ -42,7 +42,10 @@ let SUMMARY_CACHE_FILE = process.env.SUMMARY_CACHE_FILE ?? '/cache/summary-30d.j
 let RECENT_CACHE_FILE = process.env.RECENT_CACHE_FILE ?? '/cache/recent-detections.json'
 const RECENT_SNAPSHOT_LIMIT = Number(process.env.RECENT_SNAPSHOT_LIMIT ?? '2000')
 const RECENT_REFRESH_MS = Number(process.env.RECENT_REFRESH_MS ?? `${15 * 60_000}`)
+const SUMMARY_REFRESH_LEAD_MS = Number(process.env.SUMMARY_REFRESH_LEAD_MS ?? `${10 * 60_000}`)
+const RECENT_REFRESH_LEAD_MS = Number(process.env.RECENT_REFRESH_LEAD_MS ?? `${60_000}`)
 const CACHEZ_STATUS_CACHE_MS = Number(process.env.CACHEZ_STATUS_CACHE_MS ?? '10000')
+const CACHE_STALE_GRACE_MS = Number(process.env.CACHE_STALE_GRACE_MS ?? `${2 * 60_000}`)
 const CACHE_REFRESH_TICK_MS = Number(process.env.CACHE_REFRESH_TICK_MS ?? '60000')
 const FALLBACK_CACHE_ROOT = '/tmp/birdnet-dashboard-cache'
 
@@ -498,24 +501,34 @@ const getSummaryState = async () => {
   const now = Date.now()
   const summary = await loadSummaryFromDisk()
   const hasPayload = Boolean(summary?.payload)
-  const isFresh = Boolean(summary && now - summary.generatedAtMs < SUMMARY_TTL_MS)
+  const ageMs = summary ? Math.max(0, now - summary.generatedAtMs) : null
+  const isFresh = Boolean(summary && ageMs !== null && ageMs < SUMMARY_TTL_MS)
   return {
     hasPayload,
     isFresh,
+    ageMs,
     payload: summary?.payload ?? null,
   }
 }
 
+const shouldRefreshByAge = (ageMs, ttlMs, leadMs) => {
+  if (ageMs === null) {
+    return true
+  }
+  return ageMs >= Math.max(0, ttlMs - Math.max(0, leadMs))
+}
+
 const refreshSummaryIfStale = async () => {
   const state = await getSummaryState()
-  if (!state.hasPayload || !state.isFresh) {
+  if (!state.hasPayload || shouldRefreshByAge(state.ageMs, SUMMARY_TTL_MS, SUMMARY_REFRESH_LEAD_MS)) {
     await startSummaryRefresh()
   }
 }
 
 const refreshRecentIfStale = async () => {
   const recent = await loadRecentFromDisk()
-  if (!recent || Date.now() - recent.generatedAtMs >= RECENT_REFRESH_MS) {
+  const ageMs = recent ? Math.max(0, Date.now() - recent.generatedAtMs) : null
+  if (shouldRefreshByAge(ageMs, RECENT_REFRESH_MS, RECENT_REFRESH_LEAD_MS)) {
     await startRecentRefresh()
   }
 }
@@ -621,7 +634,21 @@ const buildCacheHealthState = async () => {
   const recentAgeMs = recent ? Math.max(0, now - recent.generatedAtMs) : null
   const summaryFresh = Boolean(summary && summaryAgeMs !== null && summaryAgeMs < SUMMARY_TTL_MS)
   const recentFresh = Boolean(recent && recentAgeMs !== null && recentAgeMs < RECENT_REFRESH_MS)
-  const healthy = summaryFresh && recentFresh
+  const summaryGrace = Boolean(
+    summary &&
+      summaryAgeMs !== null &&
+      summaryAgeMs < SUMMARY_TTL_MS + CACHE_STALE_GRACE_MS &&
+      summaryCache.inFlight,
+  )
+  const recentGrace = Boolean(
+    recent &&
+      recentAgeMs !== null &&
+      recentAgeMs < RECENT_REFRESH_MS + CACHE_STALE_GRACE_MS &&
+      recentRefreshInFlight,
+  )
+  const summaryHealthy = summaryFresh || summaryGrace
+  const recentHealthy = recentFresh || recentGrace
+  const healthy = summaryHealthy && recentHealthy
 
   return {
     statusCode: healthy ? 200 : 503,
@@ -630,6 +657,8 @@ const buildCacheHealthState = async () => {
       summary: {
         present: Boolean(summary),
         fresh: summaryFresh,
+        in_grace: summaryGrace,
+        refresh_in_flight: Boolean(summaryCache.inFlight),
         generated_at: toIsoOrNull(summary?.generatedAtMs ?? null),
         age_ms: summaryAgeMs,
         ttl_ms: SUMMARY_TTL_MS,
@@ -637,10 +666,13 @@ const buildCacheHealthState = async () => {
       recent: {
         present: Boolean(recent),
         fresh: recentFresh,
+        in_grace: recentGrace,
+        refresh_in_flight: Boolean(recentRefreshInFlight),
         generated_at: toIsoOrNull(recent?.generatedAtMs ?? null),
         age_ms: recentAgeMs,
         ttl_ms: RECENT_REFRESH_MS,
       },
+      grace_ms: CACHE_STALE_GRACE_MS,
     },
   }
 }
