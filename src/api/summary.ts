@@ -1,4 +1,4 @@
-import { buildApiUrl } from './apiClient'
+import { buildApiUrl, requestJson } from './apiClient'
 
 export type SummarySpeciesCount = {
   commonName: string
@@ -91,6 +91,35 @@ const toHourlyBins = (
 }
 
 export const fetchSummary30d = async (signal?: AbortSignal): Promise<Summary30d> => {
+  if (import.meta.env.VITE_DEMO_MODE === 'true') {
+    const raw = await requestJson<RawSummaryResponse>(buildApiUrl('/api/v2/summary/30d'), {
+      signal,
+    })
+
+    const nowIso = new Date().toISOString()
+    const stats = raw.stats ?? {}
+    const archiveRaw = raw.archive
+    const archiveGroups =
+      Array.isArray(archiveRaw) ? archiveRaw : archiveRaw?.groups ?? []
+
+    return {
+      generatedAt: raw.generatedAt ?? raw.generated_at ?? nowIso,
+      windowStart: raw.windowStart ?? raw.window_start ?? '',
+      windowEnd: raw.windowEnd ?? raw.window_end ?? '',
+      pending: false,
+      stats: {
+        totalDetections: Number(stats.totalDetections ?? stats.total_detections ?? 0),
+        uniqueSpecies: Number(stats.uniqueSpecies ?? stats.unique_species ?? 0),
+        avgConfidence: Number(stats.avgConfidence ?? stats.avg_confidence ?? 0),
+        hourlyBins: toHourlyBins(stats.hourlyBins ?? stats.hourly_bins),
+        topSpecies: (stats.topSpecies ?? stats.top_species ?? []).map(toSpeciesCount),
+      },
+      archive: {
+        groups: archiveGroups.map(toSpeciesCount),
+      },
+    }
+  }
+
   const response = await fetch(buildApiUrl('/api/v2/summary/30d'), {
     signal,
     cache: 'no-store',
