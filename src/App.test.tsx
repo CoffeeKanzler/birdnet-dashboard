@@ -256,10 +256,15 @@ describe('App navigation and URL state', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Attribution From Landing' }))
     expect(screen.getByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeInTheDocument()
+    expect(document.body.style.overflow).toBe('hidden')
     fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
+    await waitFor(() => {
+      expect(document.body.style.overflow).toBe('')
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Bildnachweise' }))
     expect(screen.getByText(/Noch keine Bildnachweise geladen/)).toBeInTheDocument()
+    expect(document.body.style.overflow).toBe('hidden')
 
     records.push({
       commonName: 'Amsel',
@@ -279,6 +284,9 @@ describe('App navigation and URL state', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
     expect(screen.queryByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeNull()
+    await waitFor(() => {
+      expect(document.body.style.overflow).toBe('')
+    })
   })
 
   it('supports modal keyboard controls and focus trap', async () => {
@@ -309,6 +317,17 @@ describe('App navigation and URL state', () => {
     expect(closeButton).toHaveFocus()
 
     fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeNull()
+    })
+  })
+
+  it('closes attribution modal when clicking backdrop', async () => {
+    renderWithQuery(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Bildnachweise' }))
+    expect(screen.getByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('dialog').parentElement as HTMLElement)
     await waitFor(() => {
       expect(screen.queryByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeNull()
     })

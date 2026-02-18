@@ -83,6 +83,24 @@ describe('apiClient helpers', () => {
     )
   })
 
+  it('retries additional retryable HTTP status codes', async () => {
+    for (const status of [408, 425, 502, 503]) {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse({ message: 'retry' }, status))
+        .mockResolvedValueOnce(jsonResponse({ ok: true }, 200))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const result = await requestJson<{ ok: boolean }>(`/api/retry-${status}`, {
+        retries: 1,
+        retryDelayMs: 0,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    }
+  })
+
   it('throws parse errors for malformed JSON payloads', async () => {
     vi.stubGlobal(
       'fetch',
@@ -95,6 +113,39 @@ describe('apiClient helpers', () => {
     )
 
     await expect(requestJson('/api/parse')).rejects.toEqual(
+      expect.objectContaining({
+        code: 'parse',
+      }),
+    )
+  })
+
+  it('parses JSON even when content type is not application/json', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        }),
+      ),
+    )
+
+    const result = await requestJson<{ ok: boolean }>('/api/non-json-content-type')
+    expect(result.ok).toBe(true)
+  })
+
+  it('throws parse errors for partial JSON response bodies', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('{"ok":', {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+
+    await expect(requestJson('/api/partial-json')).rejects.toEqual(
       expect.objectContaining({
         code: 'parse',
       }),
@@ -176,5 +227,26 @@ describe('apiClient helpers', () => {
         code: 'aborted',
       }),
     )
+  })
+
+  it('aborts concurrent requests sharing one caller signal', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_: string, init?: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(abortError())
+          })
+        })
+      }),
+    )
+
+    const controller = new AbortController()
+    const first = requestJson('/api/shared-abort-1', { signal: controller.signal, timeoutMs: 0 })
+    const second = requestJson('/api/shared-abort-2', { signal: controller.signal, timeoutMs: 0 })
+    controller.abort()
+
+    await expect(first).rejects.toEqual(expect.objectContaining({ code: 'aborted' }))
+    await expect(second).rejects.toEqual(expect.objectContaining({ code: 'aborted' }))
   })
 })

@@ -32,6 +32,13 @@ type NavItem = {
 }
 
 const THEME_STORAGE_KEY = 'birdnet-showoff-theme'
+const NAV_ITEMS: NavItem[] = [
+  { view: 'landing', label: t('nav.live') },
+  { view: 'today', label: t('nav.today') },
+  { view: 'archive', label: t('nav.archive') },
+  { view: 'rarity', label: t('nav.highlights') },
+  { view: 'stats', label: t('nav.stats') },
+]
 
 const getInitialTheme = (): ThemeMode => {
   try {
@@ -149,7 +156,11 @@ const App = () => {
     const root = document.documentElement
     root.classList.toggle('dark', theme === 'dark')
     root.setAttribute('data-theme', theme)
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      // no-op (storage may be unavailable in restricted contexts)
+    }
   }, [theme])
 
   useEffect(() => {
@@ -245,6 +256,25 @@ const App = () => {
     window.scrollTo({ top: 0 })
   }
 
+  useEffect(() => {
+    if (!isAttributionOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    const previousPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+
+    document.body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
+    }
+  }, [isAttributionOpen])
 
   useEffect(() => {
     if (!isAttributionOpen) {
@@ -297,19 +327,18 @@ const App = () => {
   }, [isAttributionOpen])
 
   const activeNavigationView = view
-  const navItems: NavItem[] = [
-    { view: 'landing', label: t('nav.live') },
-    { view: 'today', label: t('nav.today') },
-    { view: 'archive', label: t('nav.archive') },
-    { view: 'rarity', label: t('nav.highlights') },
-    { view: 'stats', label: t('nav.stats') },
-  ]
   const openAttribution = () => {
     setIsAttributionOpen(true)
   }
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
+      <a
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-slate-900 focus:shadow-lg"
+        href="#main-content"
+      >
+        Zum Inhalt springen
+      </a>
       <header className="sticky top-0 z-30 px-4 pt-3 sm:px-6 sm:pt-4">
         <div
           className={`mx-auto flex max-w-6xl flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 shadow-sm backdrop-blur transition-all dark:border-slate-700 dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between ${
@@ -371,7 +400,7 @@ const App = () => {
                 <span className="hidden sm:inline">{theme === 'dark' ? t('theme.light') : t('theme.dark')}</span>
               </span>
             </button>
-            {navItems.map((item) => (
+            {NAV_ITEMS.map((item) => (
               <button
                 className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
                   activeNavigationView === item.view
@@ -408,7 +437,10 @@ const App = () => {
           </main>
         }
       >
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:gap-10 sm:px-6 sm:py-10">
+      <main
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:gap-10 sm:px-6 sm:py-10"
+        id="main-content"
+      >
         {view === 'landing' ? (
           <LandingView
             onAttributionOpen={openAttribution}
@@ -481,7 +513,14 @@ const App = () => {
       ) : null}
 
       {isAttributionOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsAttributionOpen(false)
+            }
+          }}
+        >
           <div
             aria-labelledby="attribution-heading"
             aria-modal="true"

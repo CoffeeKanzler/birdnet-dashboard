@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "pre-commit: docker is required for trufflehog secret scanning." >&2
+  exit 1
+fi
+
+staged_files=()
+banned_scan_files=()
+while IFS= read -r -d '' file; do
+  [ -f "$file" ] || continue
+  banned_scan_files+=("$file")
+  staged_files+=("/repo/$file")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if [ "${#staged_files[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+banned_terms_file="${BANNED_TERMS_FILE:-$repo_root/.secrets/banned-terms.txt}"
+
+if [ ! -f "$banned_terms_file" ]; then
+  echo "pre-commit: missing banned terms file: $banned_terms_file" >&2
+  echo "pre-commit: create it locally with one banned term per line." >&2
+  exit 1
+fi
+
+has_banned_terms=0
+
+for file in "${banned_scan_files[@]}"; do
+  matches="$(git show ":$file" | grep -nF -f "$banned_terms_file" || true)"
+  if [ -n "$matches" ]; then
+    has_banned_terms=1
+    echo "pre-commit: banned terms found in $file" >&2
+    echo "$matches" >&2
+  fi
+done
+
+if [ "$has_banned_terms" -ne 0 ]; then
+  echo "pre-commit: blocked due to banned terms in staged changes." >&2
+  exit 1
+fi
+
+echo "pre-commit: running trufflehog on staged files..."
+docker run --rm \
+  -v "$repo_root:/repo:ro" \
+  trufflesecurity/trufflehog:latest filesystem \
+  --no-update \
+  --no-verification \
+  --fail \
+  "${staged_files[@]}"

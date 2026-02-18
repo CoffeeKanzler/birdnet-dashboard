@@ -1,4 +1,5 @@
 import { type ErrorInfo, type ReactNode, Component } from 'react'
+import { reportFrontendError } from '../observability/errorReporter'
 
 type ErrorBoundaryProps = {
   children: ReactNode
@@ -17,6 +18,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    reportFrontendError({
+      source: 'error-boundary',
+      error,
+      metadata: {
+        componentStack: errorInfo.componentStack || null,
+      },
+    })
     console.error('Application render failed', error, errorInfo)
   }
 

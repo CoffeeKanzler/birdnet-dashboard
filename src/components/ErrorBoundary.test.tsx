@@ -1,8 +1,13 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import ErrorBoundary from './ErrorBoundary'
 import { renderWithQuery } from '../test/renderWithQuery'
+import { reportFrontendError } from '../observability/errorReporter'
+
+vi.mock('../observability/errorReporter', () => ({
+  reportFrontendError: vi.fn(),
+}))
 
 const Boom = () => {
   throw new Error('boom')
@@ -30,7 +35,15 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(errorSpy).toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(reportFrontendError).toHaveBeenCalledTimes(1)
+    expect(reportFrontendError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'error-boundary',
+        error: expect.any(Error),
+        metadata: expect.objectContaining({
+          componentStack: expect.any(String),
+        }),
+      }),
+    )
   })
 })

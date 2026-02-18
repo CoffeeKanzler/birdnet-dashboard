@@ -32,16 +32,6 @@ const normalize = (value: string) => value.trim().toLowerCase()
 const FALLBACK_WIDTH = 640
 const FALLBACK_HEIGHT = 426
 
-const withUmlauts = (value: string): string => {
-  return value
-    .replace(/Ae/g, 'Ä')
-    .replace(/Oe/g, 'Ö')
-    .replace(/Ue/g, 'Ü')
-    .replace(/ae/g, 'ä')
-    .replace(/oe/g, 'ö')
-    .replace(/ue/g, 'ü')
-}
-
 const formatTimestamp = (value: string): string => {
   if (!value) {
     return t('common.unknownTime')
@@ -125,7 +115,7 @@ const SpeciesDetailView = ({
   const [familyError, setFamilyError] = useState<string | null>(null)
   const familyRequestIdRef = useRef(0)
 
-  const loadFamilyMatches = useCallback(async () => {
+  const loadFamilyMatches = useCallback(async (signal: AbortSignal) => {
     if (!speciesInfo?.familyCommon) {
       return
     }
@@ -145,7 +135,18 @@ const SpeciesDetailView = ({
     try {
       const PAGE_LIMIT = 500
       const MAX_SCAN_PAGES = 2
-      const MAX_BACKGROUND_PAGES = 120
+      const connection = (navigator as Navigator & {
+        connection?: {
+          effectiveType?: string
+          saveData?: boolean
+        }
+      }).connection
+      const isConstrainedNetwork =
+        Boolean(connection?.saveData) ||
+        connection?.effectiveType === 'slow-2g' ||
+        connection?.effectiveType === '2g' ||
+        connection?.effectiveType === '3g'
+      const MAX_BACKGROUND_PAGES = isConstrainedNetwork ? 20 : 120
       const MAX_FAMILY_MATCHES = 20
       const MAX_SPECIES_INFO_CALLS = 24
       const MAX_SPECIES_INFO_CALLS_BACKGROUND = 120
@@ -162,6 +163,7 @@ const SpeciesDetailView = ({
         const page = await fetchDetectionsPage({
           limit: PAGE_LIMIT,
           offset: pageIndex * PAGE_LIMIT,
+          signal,
         })
 
         if (page.length === 0) {
@@ -234,7 +236,13 @@ const SpeciesDetailView = ({
         await Promise.all(
           batch.map(async (entry) => {
             const scientificKey = entry.scientificName.trim().toLowerCase()
-            const info = await fetchSpeciesInfo({ scientificName: entry.scientificName })
+            const info = await fetchSpeciesInfo({
+              scientificName: entry.scientificName,
+              signal,
+            })
+            if (signal.aborted) {
+              return
+            }
             queryClient.setQueryData(queryKeys.speciesInfo(entry.scientificName), info)
 
             if (requestId !== familyRequestIdRef.current) {
@@ -278,6 +286,7 @@ const SpeciesDetailView = ({
         const page = await fetchDetectionsPage({
           limit: PAGE_LIMIT,
           offset: pageIndex * PAGE_LIMIT,
+          signal,
         })
 
         if (requestId !== familyRequestIdRef.current) {
@@ -364,7 +373,13 @@ const SpeciesDetailView = ({
         await Promise.all(
           batch.map(async (entry) => {
             const scientificKey = entry.scientificName.trim().toLowerCase()
-            const info = await fetchSpeciesInfo({ scientificName: entry.scientificName })
+            const info = await fetchSpeciesInfo({
+              scientificName: entry.scientificName,
+              signal,
+            })
+            if (signal.aborted) {
+              return
+            }
             queryClient.setQueryData(queryKeys.speciesInfo(entry.scientificName), info)
 
             if (requestId !== familyRequestIdRef.current) {
@@ -429,7 +444,11 @@ const SpeciesDetailView = ({
       return
     }
 
-    void loadFamilyMatches()
+    const controller = new AbortController()
+    void loadFamilyMatches(controller.signal)
+    return () => {
+      controller.abort()
+    }
   }, [loadFamilyMatches, speciesInfo?.familyCommon])
 
   const description = useMemo(() => {
@@ -467,7 +486,7 @@ const SpeciesDetailView = ({
     return t('species.fallbackDescription', { commonName, scientificName })
   }, [commonName, scientificName])
 
-  const descriptionLabel = useMemo(() => withUmlauts(description), [description])
+  const descriptionLabel = useMemo(() => description, [description])
 
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90 sm:p-8">

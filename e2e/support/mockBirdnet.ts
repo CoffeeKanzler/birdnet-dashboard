@@ -18,11 +18,7 @@ const offsetDays = (base: Date, days: number): Date => {
   return new Date(base.valueOf() + days * 24 * 60 * 60_000)
 }
 
-const REFERENCE_NOW = (() => {
-  const now = new Date()
-  now.setUTCHours(12, 0, 0, 0)
-  return now
-})()
+const REFERENCE_NOW = new Date('2026-02-18T12:00:00.000Z')
 
 const buildDetections = (): MockDetectionRecord[] => {
   const now = new Date(REFERENCE_NOW)

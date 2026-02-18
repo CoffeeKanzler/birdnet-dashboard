@@ -25,6 +25,7 @@ const SpeciesCard = ({
   const width = photo?.width ?? FALLBACK_WIDTH
   const height = photo?.height ?? FALLBACK_HEIGHT
   const isInteractive = typeof onSelect === 'function'
+  const CardTag = isInteractive ? 'div' : 'article'
 
   const handleSelect = () => {
     onSelect?.({ commonName, scientificName })
@@ -40,7 +41,7 @@ const SpeciesCard = ({
     : t('attribution.showAttribution')
 
   return (
-    <article
+    <CardTag
       className={`group flex h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md dark:bg-slate-800 dark:hover:border-slate-600 focus-within:ring-2 focus-within:ring-emerald-200 motion-safe:animate-[fadeUp_0.5s_ease] ${
         highlight
           ? 'border-emerald-200 ring-1 ring-emerald-100'
@@ -134,7 +135,7 @@ const SpeciesCard = ({
           </span>
         ) : null}
       </div>
-    </article>
+    </CardTag>
   )
 }
 
