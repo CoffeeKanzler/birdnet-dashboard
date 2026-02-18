@@ -130,13 +130,14 @@ const App = () => {
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
-  const navItems: NavItem[] = [
+  const allNavItems: NavItem[] = [
     { view: 'landing', label: t('nav.live') },
     { view: 'today', label: t('nav.today') },
     { view: 'archive', label: t('nav.archive') },
     { view: 'rarity', label: t('nav.highlights') },
     { view: 'stats', label: t('nav.stats') },
-  ].filter((item) => HIGHLIGHTS_ENABLED || item.view !== 'rarity')
+  ]
+  const navItems: NavItem[] = allNavItems.filter((item) => HIGHLIGHTS_ENABLED || item.view !== 'rarity')
 
   const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
     const nextUrl = createRoute(state, locale, includeLocaleInRoute)
