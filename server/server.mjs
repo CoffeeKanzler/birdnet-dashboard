@@ -1,6 +1,32 @@
+// @ts-check
+
 import { createServer } from 'node:http'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+
+/**
+ * @typedef {Record<string, unknown>} DetectionRecord
+ * @typedef {{ common_name: string, scientific_name: string }} SpeciesEntry
+ * @typedef {{ detections: DetectionRecord[], total: number }} DetectionsPage
+ * @typedef {{ payload: SummaryPayload, generatedAtMs: number } | null} SummaryCacheDiskEntry
+ * @typedef {{ generatedAtMs: number, detections: DetectionRecord[] } | null} RecentCacheDiskEntry
+ * @typedef {{ inFlight: Promise<SummaryPayload> | null }} SummaryCacheState
+ * @typedef {{
+ *   generated_at: string,
+ *   window_start: string,
+ *   window_end: string,
+ *   stats: {
+ *     total_detections: number,
+ *     unique_species: number,
+ *     avg_confidence: number,
+ *     hourly_bins: number[],
+ *     top_species: Array<SpeciesEntry & { count: number }>
+ *   },
+ *   archive: {
+ *     groups: Array<SpeciesEntry & { count: number, last_seen_at?: string }>
+ *   }
+ * }} SummaryPayload
+ */
 
 const PORT = Number(process.env.PORT ?? '3001')
 const HOST = process.env.HOST ?? '127.0.0.1'
@@ -9,36 +35,104 @@ const SUMMARY_TTL_MS = 60 * 60_000
 const PAGE_LIMIT = 500
 const PAGE_FETCH_CONCURRENCY = 4
 const UPSTREAM_TIMEOUT_MS = Number(process.env.UPSTREAM_TIMEOUT_MS ?? '12000')
+const READY_CHECK_TIMEOUT_MS = Number(process.env.READY_CHECK_TIMEOUT_MS ?? '3000')
+const READYZ_CACHE_MS = Number(process.env.READYZ_CACHE_MS ?? '5000')
 const MAX_SUMMARY_PAGES = Number(process.env.MAX_SUMMARY_PAGES ?? '5000')
-const SUMMARY_CACHE_FILE = process.env.SUMMARY_CACHE_FILE ?? '/cache/summary-30d.json'
-const RECENT_CACHE_FILE = process.env.RECENT_CACHE_FILE ?? '/cache/recent-detections.json'
+let SUMMARY_CACHE_FILE = process.env.SUMMARY_CACHE_FILE ?? '/cache/summary-30d.json'
+let RECENT_CACHE_FILE = process.env.RECENT_CACHE_FILE ?? '/cache/recent-detections.json'
 const RECENT_SNAPSHOT_LIMIT = Number(process.env.RECENT_SNAPSHOT_LIMIT ?? '2000')
 const RECENT_REFRESH_MS = Number(process.env.RECENT_REFRESH_MS ?? `${15 * 60_000}`)
+const SUMMARY_REFRESH_LEAD_MS = Number(process.env.SUMMARY_REFRESH_LEAD_MS ?? `${10 * 60_000}`)
+const RECENT_REFRESH_LEAD_MS = Number(process.env.RECENT_REFRESH_LEAD_MS ?? `${60_000}`)
+const CACHEZ_STATUS_CACHE_MS = Number(process.env.CACHEZ_STATUS_CACHE_MS ?? '10000')
+const CACHE_STALE_GRACE_MS = Number(process.env.CACHE_STALE_GRACE_MS ?? `${2 * 60_000}`)
+const CACHE_REFRESH_TICK_MS = Number(process.env.CACHE_REFRESH_TICK_MS ?? '60000')
+const FALLBACK_CACHE_ROOT = '/tmp/birdnet-dashboard-cache'
 
-const securityHeaders = {
-  'content-security-policy':
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: https://upload.wikimedia.org https://*.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'",
-  'x-content-type-options': 'nosniff',
-  'x-frame-options': 'DENY',
-  'referrer-policy': 'strict-origin-when-cross-origin',
-  'permissions-policy': 'camera=(), microphone=(), geolocation=()',
-  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
-}
+// Security headers are applied by nginx for deployed traffic.
+const securityHeaders = Object.freeze({})
 
+/** @type {SummaryCacheState} */
 const summaryCache = {
   inFlight: null,
 }
 
-const INTERNAL_PROXY_HEADER = 'x-internal-summary-proxy'
-const INTERNAL_PROXY_VALUE = process.env.INTERNAL_PROXY_VALUE ?? '1'
+/** @type {{ checkedAtMs: number, upstreamOk: boolean } | null} */
+let upstreamReadyCache = null
 
+/** @type {{ checkedAtMs: number, statusCode: number, payload: Record<string, unknown> } | null} */
+let cacheHealthCache = null
+
+/** @type {Promise<void> | null} */
+let recentRefreshInFlight = null
+
+const INTERNAL_PROXY_HEADER = 'x-internal-summary-proxy'
+const INTERNAL_PROXY_VALUE = (() => {
+  const configured = process.env.INTERNAL_PROXY_VALUE?.trim()
+  if (configured) {
+    return configured
+  }
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+  throw new Error('INTERNAL_PROXY_VALUE is required when crypto.randomUUID is unavailable')
+})()
+
+let cachePathsValidated = false
+
+/**
+ * @param {string} candidatePath
+ * @param {string} fallbackName
+ * @returns {Promise<string>}
+ */
+const resolveWritableCachePath = async (candidatePath, fallbackName) => {
+  const probePath = `${candidatePath}.probe.${process.pid}`
+  try {
+    await mkdir(dirname(candidatePath), { recursive: true })
+    await writeFile(probePath, 'ok', 'utf8')
+    await unlink(probePath)
+    return candidatePath
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'EROFS')
+    ) {
+      const fallbackPath = `${FALLBACK_CACHE_ROOT}/${fallbackName}`
+      await mkdir(dirname(fallbackPath), { recursive: true })
+      console.error(`cache path not writable, falling back: ${candidatePath} -> ${fallbackPath}`)
+      return fallbackPath
+    }
+    throw error
+  }
+}
+
+const ensureCachePaths = async () => {
+  if (cachePathsValidated) {
+    return
+  }
+  SUMMARY_CACHE_FILE = await resolveWritableCachePath(SUMMARY_CACHE_FILE, 'summary-30d.json')
+  RECENT_CACHE_FILE = await resolveWritableCachePath(RECENT_CACHE_FILE, 'recent-detections.json')
+  cachePathsValidated = true
+}
+
+/**
+ * @param {Date} value
+ * @returns {string}
+ */
 const toIsoDate = (value) => value.toISOString().slice(0, 10)
 
+/**
+ * @param {unknown} payload
+ * @returns {number | null}
+ */
 const toGeneratedAtMs = (payload) => {
   const value = new Date(payload?.generated_at ?? '').valueOf()
   return Number.isFinite(value) ? value : null
 }
 
+/** @returns {Promise<SummaryCacheDiskEntry>} */
 const loadSummaryFromDisk = async () => {
   try {
     const raw = await readFile(SUMMARY_CACHE_FILE, 'utf8')
@@ -60,6 +154,10 @@ const loadSummaryFromDisk = async () => {
   }
 }
 
+/**
+ * @param {SummaryPayload} payload
+ * @returns {Promise<void>}
+ */
 const persistSummaryToDisk = async (payload) => {
   const cacheDir = dirname(SUMMARY_CACHE_FILE)
   await mkdir(cacheDir, { recursive: true })
@@ -67,8 +165,10 @@ const persistSummaryToDisk = async (payload) => {
   const serialized = JSON.stringify(payload)
   await writeFile(tempPath, serialized, 'utf8')
   await rename(tempPath, SUMMARY_CACHE_FILE)
+  cacheHealthCache = null
 }
 
+/** @returns {Promise<RecentCacheDiskEntry>} */
 const loadRecentFromDisk = async () => {
   try {
     const raw = await readFile(RECENT_CACHE_FILE, 'utf8')
@@ -91,6 +191,10 @@ const loadRecentFromDisk = async () => {
   }
 }
 
+/**
+ * @param {DetectionRecord[]} detections
+ * @returns {Promise<void>}
+ */
 const persistRecentToDisk = async (detections) => {
   const cacheDir = dirname(RECENT_CACHE_FILE)
   await mkdir(cacheDir, { recursive: true })
@@ -101,8 +205,15 @@ const persistRecentToDisk = async (detections) => {
   const tempPath = `${RECENT_CACHE_FILE}.${process.pid}.tmp`
   await writeFile(tempPath, JSON.stringify(payload), 'utf8')
   await rename(tempPath, RECENT_CACHE_FILE)
+  cacheHealthCache = null
 }
 
+/**
+ * @param {import('node:http').ServerResponse} res
+ * @param {number} status
+ * @param {unknown} payload
+ * @param {Record<string, string>} [extraHeaders]
+ */
 const json = (res, status, payload, extraHeaders = {}) => {
   res.writeHead(status, {
     ...securityHeaders,
@@ -127,6 +238,10 @@ const getHourlyWindow = () => {
   }
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {DetectionsPage}
+ */
 const extractDetections = (payload) => {
   if (Array.isArray(payload)) {
     return { detections: payload, total: payload.length }
@@ -139,6 +254,10 @@ const extractDetections = (payload) => {
   }
 }
 
+/**
+ * @param {DetectionRecord} detection
+ * @returns {number | null}
+ */
 const getTimestamp = (detection) => {
   const raw =
     detection?.timestamp ??
@@ -156,10 +275,20 @@ const getTimestamp = (detection) => {
   return Number.isNaN(value) ? null : value
 }
 
+/**
+ * @param {DetectionRecord} a
+ * @param {DetectionRecord} b
+ * @returns {number}
+ */
 const compareByNewest = (a, b) => {
   return (getTimestamp(b) ?? 0) - (getTimestamp(a) ?? 0)
 }
 
+/**
+ * @param {string | null | undefined} value
+ * @param {number} fallback
+ * @returns {number}
+ */
 const parsePositiveInt = (value, fallback) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -168,6 +297,10 @@ const parsePositiveInt = (value, fallback) => {
   return Math.floor(parsed)
 }
 
+/**
+ * @param {DetectionRecord} detection
+ * @returns {number}
+ */
 const getConfidence = (detection) => {
   const value = Number(detection?.confidence ?? 0)
   if (!Number.isFinite(value)) {
@@ -176,6 +309,10 @@ const getConfidence = (detection) => {
   return value > 1 ? value : value * 100
 }
 
+/**
+ * @param {DetectionRecord} detection
+ * @returns {SpeciesEntry}
+ */
 const toSpeciesEntry = (detection) => ({
   common_name: String(detection?.common_name ?? detection?.commonName ?? 'Unbekannte Art'),
   scientific_name: String(
@@ -183,6 +320,12 @@ const toSpeciesEntry = (detection) => ({
   ),
 })
 
+/**
+ * @param {string} startDate
+ * @param {string} endDate
+ * @param {number} offset
+ * @returns {Promise<DetectionsPage>}
+ */
 const fetchRangePage = async (startDate, endDate, offset) => {
   const params = new URLSearchParams({
     start_date: startDate,
@@ -200,6 +343,10 @@ const fetchRangePage = async (startDate, endDate, offset) => {
   return extractDetections(payload)
 }
 
+/**
+ * @param {number} limit
+ * @returns {Promise<DetectionRecord[]>}
+ */
 const fetchRecentFromUpstream = async (limit) => {
   const params = new URLSearchParams({
     limit: String(limit),
@@ -220,6 +367,16 @@ const fetchRecentFromUpstream = async (limit) => {
 const refreshRecentSnapshot = async () => {
   const detections = await fetchRecentFromUpstream(RECENT_SNAPSHOT_LIMIT)
   await persistRecentToDisk(detections)
+}
+
+const startRecentRefresh = () => {
+  if (recentRefreshInFlight) {
+    return recentRefreshInFlight
+  }
+  recentRefreshInFlight = refreshRecentSnapshot().finally(() => {
+    recentRefreshInFlight = null
+  })
+  return recentRefreshInFlight
 }
 
 const buildSummaryPayload = async () => {
@@ -344,28 +501,49 @@ const getSummaryState = async () => {
   const now = Date.now()
   const summary = await loadSummaryFromDisk()
   const hasPayload = Boolean(summary?.payload)
-  const isFresh = Boolean(summary && now - summary.generatedAtMs < SUMMARY_TTL_MS)
+  const ageMs = summary ? Math.max(0, now - summary.generatedAtMs) : null
+  const isFresh = Boolean(summary && ageMs !== null && ageMs < SUMMARY_TTL_MS)
   return {
     hasPayload,
     isFresh,
+    ageMs,
     payload: summary?.payload ?? null,
   }
 }
 
-const bootstrapCaches = async () => {
-  const state = await getSummaryState()
-  if (!state.hasPayload || !state.isFresh) {
-    startSummaryRefresh().catch((error) => {
-      console.error('summary prewarm failed', error)
-    })
+const shouldRefreshByAge = (ageMs, ttlMs, leadMs) => {
+  if (ageMs === null) {
+    return true
   }
+  return ageMs >= Math.max(0, ttlMs - Math.max(0, leadMs))
+}
 
-  const recent = await loadRecentFromDisk()
-  if (!recent || Date.now() - recent.generatedAtMs >= RECENT_REFRESH_MS) {
-    refreshRecentSnapshot().catch((error) => {
-      console.error('recent prewarm failed', error)
-    })
+const refreshSummaryIfStale = async () => {
+  const state = await getSummaryState()
+  if (!state.hasPayload || shouldRefreshByAge(state.ageMs, SUMMARY_TTL_MS, SUMMARY_REFRESH_LEAD_MS)) {
+    await startSummaryRefresh()
   }
+}
+
+const refreshRecentIfStale = async () => {
+  const recent = await loadRecentFromDisk()
+  const ageMs = recent ? Math.max(0, Date.now() - recent.generatedAtMs) : null
+  if (shouldRefreshByAge(ageMs, RECENT_REFRESH_MS, RECENT_REFRESH_LEAD_MS)) {
+    await startRecentRefresh()
+  }
+}
+
+const bootstrapCaches = async () => {
+  await ensureCachePaths()
+
+  await Promise.all([
+    refreshSummaryIfStale().catch((error) => {
+      console.error('summary prewarm failed', error)
+    }),
+    refreshRecentIfStale().catch((error) => {
+      console.error('recent prewarm failed', error)
+    }),
+  ])
 }
 
 const proxyUpstreamJson = async (pathWithQuery) => {
@@ -424,8 +602,109 @@ const fallbackDetectionsPage = async (url) => {
   return detections.slice(offset, offset + numResults)
 }
 
+const checkUpstreamReady = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/api/v2/detections/recent?limit=1`, {
+      signal: AbortSignal.timeout(READY_CHECK_TIMEOUT_MS),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+const getUpstreamReadyState = async () => {
+  const now = Date.now()
+  if (upstreamReadyCache && now - upstreamReadyCache.checkedAtMs < READYZ_CACHE_MS) {
+    return upstreamReadyCache.upstreamOk
+  }
+  const upstreamOk = await checkUpstreamReady()
+  upstreamReadyCache = {
+    checkedAtMs: now,
+    upstreamOk,
+  }
+  return upstreamOk
+}
+
+const buildCacheHealthState = async () => {
+  const now = Date.now()
+  const summary = await loadSummaryFromDisk()
+  const recent = await loadRecentFromDisk()
+  const summaryAgeMs = summary ? Math.max(0, now - summary.generatedAtMs) : null
+  const recentAgeMs = recent ? Math.max(0, now - recent.generatedAtMs) : null
+  const summaryFresh = Boolean(summary && summaryAgeMs !== null && summaryAgeMs < SUMMARY_TTL_MS)
+  const recentFresh = Boolean(recent && recentAgeMs !== null && recentAgeMs < RECENT_REFRESH_MS)
+  const summaryGrace = Boolean(
+    summary &&
+      summaryAgeMs !== null &&
+      summaryAgeMs < SUMMARY_TTL_MS + CACHE_STALE_GRACE_MS &&
+      summaryCache.inFlight,
+  )
+  const recentGrace = Boolean(
+    recent &&
+      recentAgeMs !== null &&
+      recentAgeMs < RECENT_REFRESH_MS + CACHE_STALE_GRACE_MS &&
+      recentRefreshInFlight,
+  )
+  const summaryHealthy = summaryFresh || summaryGrace
+  const recentHealthy = recentFresh || recentGrace
+  const healthy = summaryHealthy && recentHealthy
+
+  return {
+    statusCode: healthy ? 200 : 503,
+    payload: {
+      status: healthy ? 'healthy' : 'degraded',
+      summary: {
+        present: Boolean(summary),
+        fresh: summaryFresh,
+        in_grace: summaryGrace,
+        refresh_in_flight: Boolean(summaryCache.inFlight),
+        generated_at: toIsoOrNull(summary?.generatedAtMs ?? null),
+        age_ms: summaryAgeMs,
+        ttl_ms: SUMMARY_TTL_MS,
+      },
+      recent: {
+        present: Boolean(recent),
+        fresh: recentFresh,
+        in_grace: recentGrace,
+        refresh_in_flight: Boolean(recentRefreshInFlight),
+        generated_at: toIsoOrNull(recent?.generatedAtMs ?? null),
+        age_ms: recentAgeMs,
+        ttl_ms: RECENT_REFRESH_MS,
+      },
+      grace_ms: CACHE_STALE_GRACE_MS,
+    },
+  }
+}
+
+const getCacheHealthState = async () => {
+  const now = Date.now()
+  if (cacheHealthCache && now - cacheHealthCache.checkedAtMs < CACHEZ_STATUS_CACHE_MS) {
+    return {
+      statusCode: cacheHealthCache.statusCode,
+      payload: cacheHealthCache.payload,
+    }
+  }
+  const state = await buildCacheHealthState()
+  cacheHealthCache = {
+    checkedAtMs: now,
+    statusCode: state.statusCode,
+    payload: state.payload,
+  }
+  return state
+}
+
+const toIsoOrNull = (value) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null
+  }
+  return new Date(value).toISOString()
+}
+
 const server = createServer(async (req, res) => {
   try {
+    await ensureCachePaths()
+
     if (!req.url || !req.method) {
       res.writeHead(400, securityHeaders)
       res.end('Bad Request')
@@ -434,6 +713,88 @@ const server = createServer(async (req, res) => {
 
     const url = new URL(req.url, 'http://localhost')
     const pathname = url.pathname
+
+    if (pathname === '/healthz') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD',
+        })
+        res.end()
+        return
+      }
+
+      if (req.method === 'HEAD') {
+        res.writeHead(200, {
+          ...securityHeaders,
+          'cache-control': 'no-store',
+        })
+        res.end()
+        return
+      }
+
+      json(res, 200, { status: 'ok' })
+      return
+    }
+
+    if (pathname === '/readyz') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD',
+        })
+        res.end()
+        return
+      }
+
+      const upstreamOk = await getUpstreamReadyState()
+      const summaryState = await getSummaryState()
+      const ready = upstreamOk || summaryState.hasPayload
+      const statusCode = ready ? 200 : 503
+
+      if (req.method === 'HEAD') {
+        res.writeHead(statusCode, {
+          ...securityHeaders,
+          'cache-control': 'no-store',
+        })
+        res.end()
+        return
+      }
+
+      json(res, statusCode, {
+        status: ready ? 'ready' : 'not_ready',
+        upstream_ok: upstreamOk,
+        summary_cache_present: summaryState.hasPayload,
+        summary_cache_fresh: summaryState.isFresh,
+      })
+      return
+    }
+
+    if (pathname === '/cachez') {
+      if (!['GET', 'HEAD'].includes(req.method)) {
+        res.writeHead(405, {
+          ...securityHeaders,
+          allow: 'GET, HEAD',
+        })
+        res.end()
+        return
+      }
+
+      const healthState = await getCacheHealthState()
+      const statusCode = healthState.statusCode
+
+      if (req.method === 'HEAD') {
+        res.writeHead(statusCode, {
+          ...securityHeaders,
+          'cache-control': 'no-store',
+        })
+        res.end()
+        return
+      }
+
+      json(res, statusCode, healthState.payload)
+      return
+    }
 
     if (req.headers[INTERNAL_PROXY_HEADER] !== INTERNAL_PROXY_VALUE) {
       json(res, 403, { message: 'forbidden' })
@@ -624,6 +985,7 @@ const server = createServer(async (req, res) => {
     }
     json(res, 404, { message: 'not found' })
   } catch (error) {
+    console.error('request handling failed', error)
     json(res, 500, { message: 'internal_error' })
   }
 })
@@ -634,8 +996,13 @@ server.listen(PORT, HOST, () => {
     console.error('cache bootstrap failed', error)
   })
   setInterval(() => {
-    refreshRecentSnapshot().catch((error) => {
+    refreshSummaryIfStale().catch((error) => {
+      console.error('summary background refresh failed', error)
+    })
+  }, CACHE_REFRESH_TICK_MS)
+  setInterval(() => {
+    refreshRecentIfStale().catch((error) => {
       console.error('recent background refresh failed', error)
     })
-  }, RECENT_REFRESH_MS)
+  }, CACHE_REFRESH_TICK_MS)
 })

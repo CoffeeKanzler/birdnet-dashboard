@@ -61,7 +61,11 @@ describe('toUserErrorMessage', () => {
 
     expect(toUserErrorMessage(makeHttpError(401), 'Fallback', 'BirdNET')).toContain('wurde verweigert')
     expect(toUserErrorMessage(makeHttpError(404), 'Fallback', 'BirdNET')).toContain('nicht finden')
+    expect(toUserErrorMessage(makeHttpError(408), 'Fallback', 'BirdNET')).toContain('ist fehlgeschlagen')
+    expect(toUserErrorMessage(makeHttpError(425), 'Fallback', 'BirdNET')).toContain('ist fehlgeschlagen')
     expect(toUserErrorMessage(makeHttpError(429), 'Fallback', 'BirdNET')).toContain('Zu viele Anfragen')
+    expect(toUserErrorMessage(makeHttpError(502), 'Fallback', 'BirdNET')).toContain('momentan nicht verfuegbar')
+    expect(toUserErrorMessage(makeHttpError(503), 'Fallback', 'BirdNET')).toContain('momentan nicht verfuegbar')
     expect(toUserErrorMessage(makeHttpError(500), 'Fallback', 'BirdNET')).toContain('momentan nicht verfuegbar')
     expect(toUserErrorMessage(makeHttpError(418), 'Fallback', 'BirdNET')).toContain('ist fehlgeschlagen')
   })
@@ -87,5 +91,15 @@ describe('toUserErrorMessage', () => {
     )
 
     expect(message).toContain('Backend')
+  })
+
+  it('falls back for ApiClientError http code without explicit status', () => {
+    const error = new ApiClientError({
+      message: 'http without status',
+      code: 'http',
+      url: '/api/test',
+    })
+
+    expect(toUserErrorMessage(error, 'Fallback', 'BirdNET')).toBe('Fallback')
   })
 })

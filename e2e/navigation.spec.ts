@@ -8,7 +8,7 @@ test('today species card opens detail and returns back', async ({ page }) => {
   await page.goto('/?view=today')
   await expect(page.getByRole('heading', { name: 'Heutige Erkennungen' })).toBeVisible()
 
-  await page.locator('article[role="button"]').filter({ hasText: 'Amsel' }).first().click()
+  await page.locator('[role="button"]').filter({ hasText: 'Amsel' }).first().click()
   await expect(page).toHaveURL(/view=species/)
   await expect(page.getByRole('heading', { name: 'Amsel' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Singdrossel' })).toBeVisible()

@@ -75,7 +75,10 @@ These are evaluated inside the container at runtime:
 - `RECENT_SNAPSHOT_LIMIT` (default: `2000`)
 - `RECENT_REFRESH_MS` (default: `900000` / 15min)
 - `UPSTREAM_TIMEOUT_MS` (default: `12000`)
+- `READYZ_CACHE_MS` (default: `5000`)
+- `CACHEZ_STATUS_CACHE_MS` (default: `10000`)
 - `MAX_SUMMARY_PAGES` (default: `5000`)
+- `HEALTHCHECK_TOKEN` (optional, required for external health probing)
 
 `INTERNAL_PROXY_VALUE` is generated automatically in `docker/start.sh` if not provided.
 
@@ -131,7 +134,18 @@ When BirdNET-Go is down:
 ```bash
 nvm use
 npm ci
+git config core.hooksPath .githooks
 npm run dev
+```
+
+Pre-commit now runs:
+- Banned-term checks for sensitive identifiers in staged content
+- `trufflehog` secret scan (staged files only, via Docker)
+
+Manual full-repo secret scan:
+
+```bash
+npm run scan:secrets
 ```
 
 Build validation:
@@ -159,8 +173,35 @@ Typical release flow:
 - Wrapper server binds to loopback inside container (`127.0.0.1:3001`)
 - Internal proxy header is required for wrapper API access
 - NGINX enforces allowed methods/query shapes and rate/connection limits
+- `/healthz`, `/readyz`, `/cachez` return `404` unless caller is localhost or sends `X-Health-Token: <HEALTHCHECK_TOKEN>`
 - Security headers are enabled (CSP, HSTS, X-Frame-Options, etc.)
 - Keep network segmentation (edge/backend/traefik) in compose
+
+## Gatus monitoring (dev + prod)
+
+Set a different `HEALTHCHECK_TOKEN` per instance in each compose env (`dev`, `prod`).
+Then configure Gatus with per-endpoint headers:
+
+```yaml
+endpoints:
+  - name: birdnet-dev-ready
+    url: https://dashboard-dev.example.com/readyz
+    method: GET
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+    headers:
+      X-Health-Token: "${BIRDNET_DEV_HEALTHCHECK_TOKEN}"
+
+  - name: birdnet-prod-ready
+    url: https://birds.example.com/readyz
+    method: GET
+    interval: 1m
+    conditions:
+      - "[STATUS] == 200"
+    headers:
+      X-Health-Token: "${BIRDNET_PROD_HEALTHCHECK_TOKEN}"
+```
 
 ## Project structure
 

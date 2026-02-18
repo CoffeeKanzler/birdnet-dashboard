@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { getPhotoAttributionRecords } from './api/birdImages'
+import ErrorBoundary from './components/ErrorBoundary'
 import { siteConfig } from './config/site'
 import { t } from './i18n'
 import DetectionsView from './features/detections/DetectionsView'
@@ -25,13 +26,28 @@ type AppRouteState = {
 }
 
 type ThemeMode = 'light' | 'dark'
+type NavItem = {
+  view: MainView
+  label: string
+}
 
 const THEME_STORAGE_KEY = 'birdnet-showoff-theme'
+const NAV_ITEMS: NavItem[] = [
+  { view: 'landing', label: t('nav.live') },
+  { view: 'today', label: t('nav.today') },
+  { view: 'archive', label: t('nav.archive') },
+  { view: 'rarity', label: t('nav.highlights') },
+  { view: 'stats', label: t('nav.stats') },
+]
 
 const getInitialTheme = (): ThemeMode => {
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-  if (stored === 'light' || stored === 'dark') {
-    return stored
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (stored === 'light' || stored === 'dark') {
+      return stored
+    }
+  } catch {
+    // no-op (storage may be unavailable in restricted contexts)
   }
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
@@ -91,7 +107,7 @@ const createRoute = (state: AppRouteState): string => {
 }
 
 const App = () => {
-  const initialState = parseRouteState()
+  const [initialState] = useState<AppRouteState>(() => parseRouteState())
   const [view, setView] = useState<AppView>(initialState.view)
   const [lastMainView, setLastMainView] = useState<'today' | 'archive' | 'rarity' | 'stats'>(
     initialState.lastMainView,
@@ -104,6 +120,8 @@ const App = () => {
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [isAttributionOpen, setIsAttributionOpen] = useState(false)
   const [, setAttributionVersion] = useState(0)
+  const attributionDialogRef = useRef<HTMLDivElement | null>(null)
+  const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
@@ -118,10 +136,8 @@ const App = () => {
   }
 
   useEffect(() => {
-    const initialRoute = parseRouteState()
-    const nextUrl = createRoute(initialRoute)
-    window.history.replaceState(null, '', nextUrl)
-  }, [])
+    window.history.replaceState(null, '', createRoute(initialState))
+  }, [initialState])
 
   useEffect(() => {
     const onAttributionUpdate = () => {
@@ -140,7 +156,11 @@ const App = () => {
     const root = document.documentElement
     root.classList.toggle('dark', theme === 'dark')
     root.setAttribute('data-theme', theme)
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      // no-op (storage may be unavailable in restricted contexts)
+    }
   }, [theme])
 
   useEffect(() => {
@@ -236,6 +256,76 @@ const App = () => {
     window.scrollTo({ top: 0 })
   }
 
+  useEffect(() => {
+    if (!isAttributionOpen) {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    const previousPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+
+    document.body.style.overflow = 'hidden'
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
+    }
+  }, [isAttributionOpen])
+
+  useEffect(() => {
+    if (!isAttributionOpen) {
+      return
+    }
+
+    attributionCloseRef.current?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setIsAttributionOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const dialog = attributionDialogRef.current
+      if (!dialog) {
+        return
+      }
+
+      const focusables = dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      )
+
+      if (focusables.length === 0) {
+        return
+      }
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isAttributionOpen])
+
   const activeNavigationView = view
   const openAttribution = () => {
     setIsAttributionOpen(true)
@@ -243,6 +333,12 @@ const App = () => {
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100">
+      <a
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-slate-900 focus:shadow-lg"
+        href="#main-content"
+      >
+        Zum Inhalt springen
+      </a>
       <header className="sticky top-0 z-30 px-4 pt-3 sm:px-6 sm:pt-4">
         <div
           className={`mx-auto flex max-w-6xl flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 shadow-sm backdrop-blur transition-all dark:border-slate-700 dark:bg-slate-900/80 sm:flex-row sm:items-center sm:justify-between ${
@@ -304,66 +400,47 @@ const App = () => {
                 <span className="hidden sm:inline">{theme === 'dark' ? t('theme.light') : t('theme.dark')}</span>
               </span>
             </button>
-            <button
-              className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
-                activeNavigationView === 'landing'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-              }`}
-              onClick={() => handleViewChange('landing')}
-              type="button"
-            >
-              {t('nav.live')}
-            </button>
-            <button
-              className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
-                activeNavigationView === 'today'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-              }`}
-              onClick={() => handleViewChange('today')}
-              type="button"
-            >
-              {t('nav.today')}
-            </button>
-            <button
-              className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
-                activeNavigationView === 'archive'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-              }`}
-              onClick={() => handleViewChange('archive')}
-              type="button"
-            >
-              {t('nav.archive')}
-            </button>
-            <button
-              className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
-                activeNavigationView === 'rarity'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-              }`}
-              onClick={() => handleViewChange('rarity')}
-              type="button"
-            >
-              {t('nav.highlights')}
-            </button>
-            <button
-              className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
-                activeNavigationView === 'stats'
-                  ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-              }`}
-              onClick={() => handleViewChange('stats')}
-              type="button"
-            >
-              {t('nav.stats')}
-            </button>
+            {NAV_ITEMS.map((item) => (
+              <button
+                className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
+                  activeNavigationView === item.view
+                    ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                }`}
+                key={item.view}
+                onClick={() => handleViewChange(item.view)}
+                type="button"
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:gap-10 sm:px-6 sm:py-10">
+      <ErrorBoundary
+        fallback={
+          <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:gap-10 sm:px-6 sm:py-10">
+            <section className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-700/70 dark:bg-rose-900/20">
+              <h2 className="text-lg font-semibold text-rose-700 dark:text-rose-200">{t('errorBoundary.heading')}</h2>
+              <p className="mt-2 text-sm text-rose-700/90 dark:text-rose-200/90">{t('errorBoundary.description')}</p>
+              <button
+                className="mt-4 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+                onClick={() => {
+                  window.location.reload()
+                }}
+                type="button"
+              >
+                {t('errorBoundary.reload')}
+              </button>
+            </section>
+          </main>
+        }
+      >
+      <main
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:gap-10 sm:px-6 sm:py-10"
+        id="main-content"
+      >
         {view === 'landing' ? (
           <LandingView
             onAttributionOpen={openAttribution}
@@ -409,6 +486,7 @@ const App = () => {
           </button>
         </p>
       </main>
+      </ErrorBoundary>
 
       {showScrollTop ? (
         <button
@@ -435,19 +513,33 @@ const App = () => {
       ) : null}
 
       {isAttributionOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
-          <div className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsAttributionOpen(false)
+            }
+          }}
+        >
+          <div
+            aria-labelledby="attribution-heading"
+            aria-modal="true"
+            className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            ref={attributionDialogRef}
+            role="dialog"
+          >
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
                   {t('attribution.modalLabel')}
                 </p>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100" id="attribution-heading">
                   {t('attribution.modalHeading')}
                 </h2>
               </div>
               <button
                 className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+                ref={attributionCloseRef}
                 onClick={() => {
                   setIsAttributionOpen(false)
                 }}

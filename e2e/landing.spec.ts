@@ -9,7 +9,7 @@ test('landing view loads and shows live detection cards', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Live' })).toBeVisible()
   await expect(page.getByText('Automatisch alle 30 Sekunden aktualisiert.')).toBeVisible()
 
-  const cards = page.locator('article[role="button"]')
+  const cards = page.locator('div[role="button"]')
   await expect(cards.first()).toBeVisible()
 
   const cardCount = await cards.count()
@@ -24,7 +24,7 @@ test('landing card click navigates to species detail and back', async ({ page })
   await page.goto('/?view=landing')
   await expect(page.getByRole('heading', { name: 'Live' })).toBeVisible()
 
-  const firstCard = page.locator('article[role="button"]').first()
+  const firstCard = page.locator('div[role="button"]').first()
   await expect(firstCard).toBeVisible()
 
   const speciesName = await firstCard.locator('h3').textContent()

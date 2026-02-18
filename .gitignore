@@ -28,3 +28,4 @@ dist-ssr
 .planning/
 test-results/
 deploy-dev.sh
+.secrets/

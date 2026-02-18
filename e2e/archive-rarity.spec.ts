@@ -9,7 +9,7 @@ test('archive view supports quick range and species filter', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Erkennungen im Datumsbereich' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Letzte 30 Tage' }).click()
-  await expect(page.locator('article[role="button"]').filter({ hasText: 'Rotmilan' })).toBeVisible()
+  await expect(page.locator('[role="button"]').filter({ hasText: 'Rotmilan' })).toBeVisible()
 
   await page.getByLabel('Artenfilter').fill('does-not-exist')
   await expect(
@@ -17,7 +17,7 @@ test('archive view supports quick range and species filter', async ({ page }) =>
   ).toBeVisible()
 
   await page.getByRole('button', { name: 'Leeren' }).click()
-  await expect(page.locator('article[role="button"]').filter({ hasText: 'Rotmilan' })).toBeVisible()
+  await expect(page.locator('[role="button"]').filter({ hasText: 'Rotmilan' })).toBeVisible()
 })
 
 test('rarity highlight opens species detail and returns', async ({ page }) => {
@@ -25,9 +25,9 @@ test('rarity highlight opens species detail and returns', async ({ page }) => {
 
   await page.goto('/?view=rarity')
   await expect(page.getByRole('heading', { name: 'Top 10 Highlights' })).toBeVisible()
-  await expect(page.locator('article[role="button"]').filter({ hasText: 'Eisvogel' })).toBeVisible()
+  await expect(page.locator('[role="button"]').filter({ hasText: 'Eisvogel' })).toBeVisible()
 
-  await page.locator('article[role="button"]').filter({ hasText: 'Eisvogel' }).first().click()
+  await page.locator('[role="button"]').filter({ hasText: 'Eisvogel' }).first().click()
   await expect(page).toHaveURL(/view=species.*from=rarity/)
   await expect(page.getByRole('heading', { name: 'Eisvogel' })).toBeVisible()
 

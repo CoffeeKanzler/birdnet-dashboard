@@ -4,7 +4,6 @@
   "nav.archive": "Archiv",
   "nav.highlights": "Highlights",
   "nav.stats": "Statistik",
-
   "stats.sectionLabel": "Übersicht",
   "stats.heading": "Statistiken",
   "stats.description": "Vorberechnete Gesamtstatistik ueber alle verarbeiteten Erkennungen.",
@@ -19,13 +18,11 @@
   "stats.loading": "Statistiken werden geladen...",
   "stats.loadingProgress": "Wird geladen... {count} Erkennungen bisher",
   "stats.sampleNote": "Basiert auf {count} insgesamt verarbeiteten Erkennungen.",
-
   "theme.activateLight": "Helles Design aktivieren",
   "theme.activateDark": "Dunkles Design aktivieren",
   "theme.light": "Hell",
   "theme.dark": "Dunkel",
   "scrollTop.label": "Nach oben scrollen",
-
   "common.close": "Schließen",
   "common.refresh": "Aktualisieren",
   "common.retry": "Erneut versuchen",
@@ -42,7 +39,6 @@
   "common.detectionPlural": "Sichtungen",
   "common.confidence": "Sicherheit {value}",
   "common.timezone": "Zeitzone: {zone}",
-
   "live.sectionLabel": "Live-Highlights",
   "live.heading": "Live",
   "live.autoRefresh": "Automatisch alle 30 Sekunden aktualisiert.",
@@ -51,7 +47,6 @@
   "live.statusMinutesAgo": "Vor {minutes} min",
   "live.statusHoursAgo": "Vor {hours} h",
   "live.noDetections": "Noch keine aktuellen Arten erkannt.",
-
   "today.sectionLabel": "Heute",
   "today.heading": "Heutige Erkennungen",
   "today.lastUpdated": "Zuletzt aktualisiert: {time}",
@@ -69,7 +64,6 @@
   "today.noFilteredList": "Noch keine Erkennungen passen zu diesem Filter.",
   "today.noDetectionsList": "Noch keine Erkennungen gefunden.",
   "today.loading": "Erkennungen von BirdNET-Go werden geladen...",
-
   "archive.sectionLabel": "Archiv",
   "archive.heading": "Erkennungen im Datumsbereich",
   "archive.description": "Erkennungen ausserhalb von heute anzeigen.",
@@ -87,7 +81,6 @@
   "archive.quickToday": "Heute",
   "archive.quickWeek": "Letzte 7 Tage",
   "archive.quickMonth": "Letzte 30 Tage",
-
   "rarity.periodLabel": "Zeitraum (fix)",
   "rarity.periodHeading": "Letzte 30 Tage",
   "rarity.periodDescription": "Der Zeitraum ist für bessere Geschwindigkeit fest auf 30 Tage gesetzt.",
@@ -103,7 +96,6 @@
   "rarity.matchCount": "{count} Treffer",
   "rarity.noHighlights": "Keine besonderen Arten in diesem Zeitraum gefunden.",
   "rarity.lastSeen": "Zuletzt gesehen: {date}",
-
   "notable.sectionLabel": "Lokale besondere Sichtungen",
   "notable.heading": "Besondere Arten im Zeitraum",
   "notable.curatedFor": "Kuratiert fuer {region} · {range}",
@@ -111,7 +103,6 @@
   "notable.noResults": "Noch keine besonderen Sichtungen in diesem Zeitraum gefunden.",
   "notable.whyNotable": "Warum bemerkenswert: {reasons}",
   "notable.lastSeen": "Zuletzt gesehen {date}",
-
   "species.sectionLabel": "Art-Detail",
   "species.familyLabel": "Familie",
   "species.familyDescription": "Weitere erkannte Arten derselben Familie.",
@@ -127,14 +118,12 @@
   "species.rarityLabel": "Seltenheit: {value}",
   "species.familyBadge": "Familie: {value}",
   "species.fallbackDescription": "{commonName} ({scientificName}) ist an diesem Standort erfasst. Eine redaktionelle Kurzbeschreibung wird noch ergaenzt.",
-
   "rarity.veryRare": "sehr selten",
   "rarity.rare": "selten",
   "rarity.uncommon": "unregelmaessig",
   "rarity.common": "haeufig",
   "rarity.veryCommon": "sehr haeufig",
   "rarity.unknown": "unbekannt",
-
   "attribution.footer": "Bilder stammen aus Wikipedia/Wikimedia. Es gelten die jeweils dort angegebenen Lizenzbedingungen.",
   "attribution.linkLabel": "Bildnachweise",
   "attribution.modalLabel": "Bildnachweise",
@@ -155,7 +144,6 @@
   "attribution.wikimediaLink": "Wikimedia/Wikipedia",
   "attribution.licenseText": "Lizenztext",
   "attribution.photoOf": "Foto von {name}",
-
   "error.accessDenied": "Zugriff auf {service} wurde verweigert.",
   "error.notFound": "{service} konnte die angeforderten Daten nicht finden.",
   "error.tooManyRequests": "Zu viele Anfragen an {service}. Bitte in kurzem Abstand erneut versuchen.",
@@ -168,5 +156,8 @@
   "error.archiveLoad": "Archiv-Erkennungen konnten nicht geladen werden",
   "error.speciesLoad": "Art-Erkennungen konnten nicht geladen werden.",
   "error.speciesPhotoLoad": "Artenfoto konnte nicht geladen werden",
-  "error.familyLoad": "Arten dieser Familie konnten nicht geladen werden."
+  "error.familyLoad": "Arten dieser Familie konnten nicht geladen werden.",
+  "errorBoundary.heading": "Etwas ist schiefgelaufen",
+  "errorBoundary.description": "Beim Laden dieser Ansicht ist ein unerwarteter Fehler aufgetreten.",
+  "errorBoundary.reload": "Seite neu laden"
 }

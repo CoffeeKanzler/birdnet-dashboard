@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -12,6 +16,7 @@ jobs:
   quality-gate:
     name: quality-gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,9 +39,17 @@ jobs:
       - name: Run build
         run: npm run build
 
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
   e2e-smoke:
     name: e2e-smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: quality-gate
     steps:
       - name: Checkout repository

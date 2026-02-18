@@ -76,7 +76,7 @@ test('archive view shows error and retries successfully', async ({ page }) => {
   await expect(retryButton).toBeVisible()
   await retryButton.click()
 
-  await expect(page.locator('article[role="button"]').filter({ hasText: 'Amsel' })).toBeVisible()
+  await expect(page.locator('[role="button"]').filter({ hasText: 'Amsel' })).toBeVisible()
 })
 
 test('landing view shows error state when API fails', async ({ page }) => {

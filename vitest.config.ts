@@ -15,6 +15,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
+      include: [
+        'src/App.tsx',
+        'src/api/apiClient.ts',
+        'src/components/ErrorBoundary.tsx',
+        'src/features/statistics/StatisticsView.tsx',
+        'src/i18n/index.ts',
+        'src/utils/errorMessages.ts',
+      ],
       exclude: ['**/*.json', 'src/test/**', 'dist/**', 'e2e/**'],
       thresholds: {
         statements: 95,

@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   color-scheme: light;
@@ -47,6 +48,20 @@ body {
     );
   color: var(--text-main);
   font-family: "Space Grotesk", sans-serif;
+}
+
+:root.dark body {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(56, 189, 248, 0.1), transparent 45%),
+    radial-gradient(circle at 88% 12%, rgba(168, 85, 247, 0.08), transparent 42%),
+    linear-gradient(180deg, #111827, #0b1220 55%, #0b1220 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(51, 65, 85, 0.12) 0,
+      rgba(51, 65, 85, 0.12) 1px,
+      transparent 1px,
+      transparent 6px
+    );
 }
 
 .dark .bg-white,
