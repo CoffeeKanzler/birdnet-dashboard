@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Renovate
         if: steps.token_check.outputs.has_token == 'true'
-        uses: renovatebot/github-action@v43
+        uses: renovatebot/github-action@v46.1.1
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           configurationFile: renovate.json
