@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { t, setLocale, getLocale, getSpeciesData } from '.'
+import { t, setLocale, getLocale, getSpeciesData, isSupportedLocale, resolveInitialLocale } from '.'
 
 beforeEach(() => {
   setLocale('de')
@@ -30,6 +30,48 @@ describe('setLocale() / getLocale()', () => {
     expect(getLocale()).toBe('de')
     setLocale('en')
     expect(getLocale()).toBe('en')
+  })
+
+  it('falls back to de for unsupported locale', () => {
+    setLocale('fr')
+    expect(getLocale()).toBe('de')
+  })
+})
+
+describe('locale helpers', () => {
+  it('validates supported locales', () => {
+    expect(isSupportedLocale('de')).toBe(true)
+    expect(isSupportedLocale('en')).toBe(true)
+    expect(isSupportedLocale('fr')).toBe(false)
+  })
+
+  it('resolves initial locale by precedence (url > storage > navigator > fallback)', () => {
+    expect(
+      resolveInitialLocale({
+        urlLocale: 'en',
+        storedLocale: 'de',
+        navigatorLocale: 'de-DE',
+        fallbackLocale: 'de',
+      }),
+    ).toBe('en')
+
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: 'en',
+        navigatorLocale: 'de-DE',
+        fallbackLocale: 'de',
+      }),
+    ).toBe('en')
+
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: null,
+        navigatorLocale: 'en-US',
+        fallbackLocale: 'de',
+      }),
+    ).toBe('en')
   })
 })
 

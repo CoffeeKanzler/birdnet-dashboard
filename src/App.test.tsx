@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PhotoAttributionRecord } from './api/birdImages'
 import App from './App'
+import { setLocale } from './i18n'
 import { renderWithQuery } from './test/renderWithQuery'
 
 const mocks = vi.hoisted(() => {
@@ -143,6 +144,8 @@ describe('App navigation and URL state', () => {
     mocks.getPhotoAttributionRecords.mockReset()
     mocks.getPhotoAttributionRecords.mockReturnValue([])
     mocks.throwLandingView = false
+    setLocale('de')
+    document.documentElement.lang = 'de'
     window.localStorage.clear()
     window.history.replaceState(null, '', '/')
   })
@@ -189,6 +192,22 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
     expect(window.location.search).toBe('?view=stats')
+  })
+
+  it('switches language at runtime and persists locale in URL/localStorage', async () => {
+    renderWithQuery(<App />)
+
+    expect(screen.getByRole('button', { name: 'Heute' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sprache' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument()
+    })
+
+    expect(document.documentElement.lang).toBe('en')
+    expect(window.localStorage.getItem('birdnet-showoff-locale')).toBe('en')
+    expect(window.location.search).toContain('lang=en')
   })
 
   it('parses species route and returns to source view on back', () => {
