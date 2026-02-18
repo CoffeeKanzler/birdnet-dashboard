@@ -90,5 +90,15 @@ export function getSpeciesData(scientificName: string): SpeciesData {
 export function getLocalizedCommonName(commonName: string, scientificName?: string): string {
   const localeData = getSpeciesData(scientificName ?? '')
   const localized = localeData.commonName?.trim()
-  return localized || commonName
+  if (localized) {
+    return localized
+  }
+
+  // In English mode, avoid falling back to backend-localized common names
+  // (often German) when no curated English mapping is available.
+  if (currentLocale === 'en' && scientificName?.trim()) {
+    return scientificName.trim()
+  }
+
+  return commonName
 }
