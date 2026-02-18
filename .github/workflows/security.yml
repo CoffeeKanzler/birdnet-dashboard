@@ -2,8 +2,12 @@ name: security
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "30 3 * * *"
 
 permissions:
   contents: read
@@ -40,6 +44,7 @@ jobs:
   container-image-scan:
     name: container-image-scan
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
