@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   useSpeciesDetections: vi.fn(),
   useSpeciesPhoto: vi.fn(),
   fetchSpeciesInfo: vi.fn(),
-  fetchDetectionsPage: vi.fn(),
+  fetchFamilyMatches: vi.fn(),
 }))
 
 vi.mock('./useSpeciesDetections', () => ({
@@ -21,7 +21,7 @@ vi.mock('../detections/useSpeciesPhoto', () => ({
 
 vi.mock('../../api/birdnet', () => ({
   fetchSpeciesInfo: (...args: unknown[]) => mocks.fetchSpeciesInfo(...args),
-  fetchDetectionsPage: (...args: unknown[]) => mocks.fetchDetectionsPage(...args),
+  fetchFamilyMatches: (...args: unknown[]) => mocks.fetchFamilyMatches(...args),
 }))
 
 vi.mock('../../i18n', () => ({
@@ -44,7 +44,7 @@ describe('SpeciesDetailView', () => {
     mocks.fetchSpeciesInfo.mockResolvedValue({
       rarityStatus: 'common',
     })
-    mocks.fetchDetectionsPage.mockResolvedValue([])
+    mocks.fetchFamilyMatches.mockResolvedValue([])
   })
 
   it('shows loading state for species detections', () => {
@@ -131,32 +131,14 @@ describe('SpeciesDetailView', () => {
   it('renders family matches and selects a related species', async () => {
     const onSpeciesSelect = vi.fn()
 
-    mocks.fetchSpeciesInfo.mockImplementation(
-      async ({ scientificName }: { scientificName: string }) => {
-        if (scientificName === 'Turdus merula') {
-          return { rarityStatus: 'common', familyCommon: 'Drosseln' }
-        }
-        if (scientificName === 'Turdus pilaris') {
-          return { rarityStatus: 'common', familyCommon: 'Drosseln' }
-        }
-        return { rarityStatus: 'common', familyCommon: 'Andere' }
-      },
-    )
-
-    mocks.fetchDetectionsPage.mockResolvedValue([
+    mocks.fetchSpeciesInfo.mockResolvedValue({
+      rarityStatus: 'common',
+      familyCommon: 'Drosseln',
+    })
+    mocks.fetchFamilyMatches.mockResolvedValue([
       {
-        id: 'det-1',
         commonName: 'Wacholderdrossel',
         scientificName: 'Turdus pilaris',
-        timestamp: '2026-02-18T10:00:00.000Z',
-        confidence: 0.71,
-      },
-      {
-        id: 'det-2',
-        commonName: 'Blaumeise',
-        scientificName: 'Cyanistes caeruleus',
-        timestamp: '2026-02-18T10:01:00.000Z',
-        confidence: 0.71,
       },
     ])
 
@@ -185,7 +167,7 @@ describe('SpeciesDetailView', () => {
       rarityStatus: 'common',
       familyCommon: 'Drosseln',
     })
-    mocks.fetchDetectionsPage.mockRejectedValue(new Error('network down'))
+    mocks.fetchFamilyMatches.mockRejectedValue(new Error('network down'))
 
     renderWithQuery(
       <SpeciesDetailView

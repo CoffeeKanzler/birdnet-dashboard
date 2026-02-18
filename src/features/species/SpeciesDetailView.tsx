@@ -2,9 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
-  fetchDetectionsPage,
+  fetchFamilyMatches,
   fetchSpeciesInfo,
-  type SpeciesInfo,
+  type FamilyMatch,
 } from '../../api/birdnet'
 import { queryKeys } from '../../api/queryKeys'
 import { siteConfig } from '../../config/site'
@@ -23,14 +23,19 @@ type SpeciesDetailViewProps = {
   onSpeciesSelect?: (species: { commonName: string; scientificName: string }) => void
 }
 
-type FamilyMatch = {
-  commonName: string
-  scientificName: string
-}
-
 const normalize = (value: string) => value.trim().toLowerCase()
 const FALLBACK_WIDTH = 640
 const FALLBACK_HEIGHT = 426
+
+const withUmlauts = (value: string): string => {
+  return value
+    .replace(/Ae/g, 'Ä')
+    .replace(/Oe/g, 'Ö')
+    .replace(/Ue/g, 'Ü')
+    .replace(/ae/g, 'ä')
+    .replace(/oe/g, 'ö')
+    .replace(/ue/g, 'ü')
+}
 
 const formatTimestamp = (value: string): string => {
   if (!value) {
@@ -115,8 +120,11 @@ const SpeciesDetailView = ({
   const [familyError, setFamilyError] = useState<string | null>(null)
   const familyRequestIdRef = useRef(0)
 
-  const loadFamilyMatches = useCallback(async (signal: AbortSignal) => {
+  const loadFamilyMatches = useCallback(async () => {
     if (!speciesInfo?.familyCommon) {
+      setFamilyMatches(null)
+      setFamilyError(null)
+      setIsFamilyLoading(false)
       return
     }
 
@@ -133,292 +141,22 @@ const SpeciesDetailView = ({
     setFamilyError(null)
 
     try {
-      const PAGE_LIMIT = 500
-      const MAX_SCAN_PAGES = 2
-      const connection = (navigator as Navigator & {
-        connection?: {
-          effectiveType?: string
-          saveData?: boolean
-        }
-      }).connection
-      const isConstrainedNetwork =
-        Boolean(connection?.saveData) ||
-        connection?.effectiveType === 'slow-2g' ||
-        connection?.effectiveType === '2g' ||
-        connection?.effectiveType === '3g'
-      const MAX_BACKGROUND_PAGES = isConstrainedNetwork ? 20 : 120
-      const MAX_FAMILY_MATCHES = 20
-      const MAX_SPECIES_INFO_CALLS = 24
-      const MAX_SPECIES_INFO_CALLS_BACKGROUND = 120
-      const LOOKUP_CONCURRENCY = 6
-      const candidateSpecies = new Map<
-        string,
-        {
-          commonName: string
-          scientificName: string
-        }
-      >()
-
-      for (let pageIndex = 0; pageIndex < MAX_SCAN_PAGES; pageIndex += 1) {
-        const page = await fetchDetectionsPage({
-          limit: PAGE_LIMIT,
-          offset: pageIndex * PAGE_LIMIT,
-          signal,
-        })
-
-        if (page.length === 0) {
-          break
-        }
-
-        for (const detection of page) {
-          const key = detection.scientificName.trim().toLowerCase()
-          if (!key || key === 'unbekannte art') {
-            continue
-          }
-
-          if (!candidateSpecies.has(key)) {
-            candidateSpecies.set(key, {
-              commonName: detection.commonName,
-              scientificName: detection.scientificName,
-            })
-          }
-        }
-
-        if (page.length < PAGE_LIMIT) {
-          break
-        }
-      }
-
-      if (requestId !== familyRequestIdRef.current) {
-        return
-      }
-
-      const matchesByScientific = new Map<string, FamilyMatch>()
-      const ownScientificName = scientificName.trim().toLowerCase()
-
-      const candidateList = Array.from(candidateSpecies.values()).filter((entry) => {
-        const scientificKey = entry.scientificName.trim().toLowerCase()
-        return Boolean(scientificKey) && scientificKey !== ownScientificName
+      const matches = await fetchFamilyMatches({
+        familyCommon: speciesInfo.familyCommon,
+        scientificName,
+        limit: 20,
       })
 
-      const unresolved: Array<{ commonName: string; scientificName: string }> = []
-
-      for (const entry of candidateList) {
-        const scientificKey = entry.scientificName.trim().toLowerCase()
-
-        const cachedInfo = queryClient.getQueryData<SpeciesInfo | null>(
-          queryKeys.speciesInfo(entry.scientificName),
-        )
-        if (cachedInfo === undefined) {
-          unresolved.push(entry)
-          continue
-        }
-
-        if (!cachedInfo?.familyCommon) {
-          continue
-        }
-
-        if (cachedInfo.familyCommon.trim().toLowerCase() !== familyKey) {
-          continue
-        }
-
-        matchesByScientific.set(scientificKey, {
-          commonName: entry.commonName,
-          scientificName: entry.scientificName,
-        })
-      }
-
-      const unresolvedLimited = unresolved.slice(0, MAX_SPECIES_INFO_CALLS)
-
-      for (let index = 0; index < unresolvedLimited.length; index += LOOKUP_CONCURRENCY) {
-        const batch = unresolvedLimited.slice(index, index + LOOKUP_CONCURRENCY)
-
-        await Promise.all(
-          batch.map(async (entry) => {
-            const scientificKey = entry.scientificName.trim().toLowerCase()
-            const info = await fetchSpeciesInfo({
-              scientificName: entry.scientificName,
-              signal,
-            })
-            if (signal.aborted) {
-              return
-            }
-            queryClient.setQueryData(queryKeys.speciesInfo(entry.scientificName), info)
-
-            if (requestId !== familyRequestIdRef.current) {
-              return
-            }
-
-            if (!info?.familyCommon) {
-              return
-            }
-
-            if (info.familyCommon.trim().toLowerCase() !== familyKey) {
-              return
-            }
-
-            matchesByScientific.set(scientificKey, {
-              commonName: entry.commonName,
-              scientificName: entry.scientificName,
-            })
-          }),
-        )
-
-        if (matchesByScientific.size >= MAX_FAMILY_MATCHES) {
-          break
-        }
-      }
-
       if (requestId !== familyRequestIdRef.current) {
         return
       }
 
-      let matches = Array.from(matchesByScientific.values())
+      const sortedMatches = matches
+        .slice()
         .sort((a, b) => a.commonName.localeCompare(b.commonName, 'de'))
-        .slice(0, MAX_FAMILY_MATCHES)
 
-      setFamilyMatches(matches)
-
-      const backgroundCandidates = new Map(candidateSpecies)
-      let emptySpeciesPagesInRow = 0
-
-      for (let pageIndex = MAX_SCAN_PAGES; pageIndex < MAX_BACKGROUND_PAGES; pageIndex += 1) {
-        const page = await fetchDetectionsPage({
-          limit: PAGE_LIMIT,
-          offset: pageIndex * PAGE_LIMIT,
-          signal,
-        })
-
-        if (requestId !== familyRequestIdRef.current) {
-          return
-        }
-
-        if (page.length === 0) {
-          break
-        }
-
-        let newSpeciesInPage = 0
-
-        for (const detection of page) {
-          const key = detection.scientificName.trim().toLowerCase()
-          if (!key || key === 'unbekannte art') {
-            continue
-          }
-
-          if (!backgroundCandidates.has(key)) {
-            backgroundCandidates.set(key, {
-              commonName: detection.commonName,
-              scientificName: detection.scientificName,
-            })
-            newSpeciesInPage += 1
-          }
-        }
-
-        if (newSpeciesInPage === 0) {
-          emptySpeciesPagesInRow += 1
-        } else {
-          emptySpeciesPagesInRow = 0
-        }
-
-        if (page.length < PAGE_LIMIT || emptySpeciesPagesInRow >= 3) {
-          break
-        }
-      }
-
-      const backgroundList = Array.from(backgroundCandidates.values()).filter((entry) => {
-        const scientificKey = entry.scientificName.trim().toLowerCase()
-        return Boolean(scientificKey) && scientificKey !== ownScientificName
-      })
-
-      const backgroundUnresolved: Array<{ commonName: string; scientificName: string }> = []
-
-      for (const entry of backgroundList) {
-        const scientificKey = entry.scientificName.trim().toLowerCase()
-
-        if (matchesByScientific.has(scientificKey)) {
-          continue
-        }
-
-        const cachedInfo = queryClient.getQueryData<SpeciesInfo | null>(
-          queryKeys.speciesInfo(entry.scientificName),
-        )
-        if (cachedInfo === undefined) {
-          backgroundUnresolved.push(entry)
-          continue
-        }
-
-        if (
-          cachedInfo?.familyCommon &&
-          cachedInfo.familyCommon.trim().toLowerCase() === familyKey
-        ) {
-          matchesByScientific.set(scientificKey, {
-            commonName: entry.commonName,
-            scientificName: entry.scientificName,
-          })
-        }
-      }
-
-      const unresolvedBackgroundLimited = backgroundUnresolved.slice(
-        0,
-        MAX_SPECIES_INFO_CALLS_BACKGROUND,
-      )
-
-      for (
-        let index = 0;
-        index < unresolvedBackgroundLimited.length;
-        index += LOOKUP_CONCURRENCY
-      ) {
-        const batch = unresolvedBackgroundLimited.slice(index, index + LOOKUP_CONCURRENCY)
-
-        await Promise.all(
-          batch.map(async (entry) => {
-            const scientificKey = entry.scientificName.trim().toLowerCase()
-            const info = await fetchSpeciesInfo({
-              scientificName: entry.scientificName,
-              signal,
-            })
-            if (signal.aborted) {
-              return
-            }
-            queryClient.setQueryData(queryKeys.speciesInfo(entry.scientificName), info)
-
-            if (requestId !== familyRequestIdRef.current) {
-              return
-            }
-
-            if (
-              info?.familyCommon &&
-              info.familyCommon.trim().toLowerCase() === familyKey
-            ) {
-              matchesByScientific.set(scientificKey, {
-                commonName: entry.commonName,
-                scientificName: entry.scientificName,
-              })
-            }
-          }),
-        )
-
-        if (requestId !== familyRequestIdRef.current) {
-          return
-        }
-
-        matches = Array.from(matchesByScientific.values())
-          .sort((a, b) => a.commonName.localeCompare(b.commonName, 'de'))
-          .slice(0, MAX_FAMILY_MATCHES)
-
-        setFamilyMatches(matches)
-      }
-
-      if (requestId !== familyRequestIdRef.current) {
-        return
-      }
-
-      matches = Array.from(matchesByScientific.values())
-        .sort((a, b) => a.commonName.localeCompare(b.commonName, 'de'))
-        .slice(0, MAX_FAMILY_MATCHES)
-
-      queryClient.setQueryData(queryKeys.familyMatches(familyKey), matches)
-      setFamilyMatches(matches)
+      queryClient.setQueryData(queryKeys.familyMatches(familyKey), sortedMatches)
+      setFamilyMatches(sortedMatches)
     } catch (caughtError) {
       if (requestId !== familyRequestIdRef.current) {
         return
@@ -444,11 +182,7 @@ const SpeciesDetailView = ({
       return
     }
 
-    const controller = new AbortController()
-    void loadFamilyMatches(controller.signal)
-    return () => {
-      controller.abort()
-    }
+    void loadFamilyMatches()
   }, [loadFamilyMatches, speciesInfo?.familyCommon])
 
   const description = useMemo(() => {
@@ -486,7 +220,7 @@ const SpeciesDetailView = ({
     return t('species.fallbackDescription', { commonName, scientificName })
   }, [commonName, scientificName])
 
-  const descriptionLabel = useMemo(() => description, [description])
+  const descriptionLabel = useMemo(() => withUmlauts(description), [description])
 
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90 sm:p-8">

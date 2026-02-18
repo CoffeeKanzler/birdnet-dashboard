@@ -38,6 +38,29 @@ test('species detail shows related species as clickable buttons', async ({ page 
   await expect(page.getByRole('heading', { name: 'Singdrossel' })).toBeVisible()
 })
 
+test('family section uses one cached family endpoint request', async ({ page }) => {
+  await installBirdnetApiMocks(page)
+
+  let familyCalls = 0
+  let speciesCalls = 0
+  page.on('request', (request) => {
+    const requestUrl = request.url()
+    if (requestUrl.includes('/api/v2/family-matches')) {
+      familyCalls += 1
+    }
+    if (requestUrl.includes('/api/v2/species')) {
+      speciesCalls += 1
+    }
+  })
+
+  await page.goto('/?view=species&common=Amsel&scientific=Turdus%20merula&from=today')
+  await expect(page.getByRole('heading', { name: 'Amsel' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Singdrossel' })).toBeVisible({ timeout: 15_000 })
+
+  expect(familyCalls).toBe(1)
+  expect(speciesCalls).toBeLessThanOrEqual(2)
+})
+
 test('species detail refresh button reloads detections', async ({ page }) => {
   await installBirdnetApiMocks(page)
 

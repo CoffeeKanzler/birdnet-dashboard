@@ -18,10 +18,8 @@ const offsetDays = (base: Date, days: number): Date => {
   return new Date(base.valueOf() + days * 24 * 60 * 60_000)
 }
 
-const REFERENCE_NOW = new Date('2026-02-18T12:00:00.000Z')
-
 const buildDetections = (): MockDetectionRecord[] => {
-  const now = new Date(REFERENCE_NOW)
+  const now = new Date()
 
   return [
     {
@@ -134,6 +132,22 @@ const SPECIES_INFO: Record<string, { common_name: string; rarity: string; family
 }
 
 const normalize = (value: string): string => value.trim().toLowerCase()
+const FAMILY_SEPARATOR_PATTERN = /\s*(?:,|\/|;|\||&|\+)\s*|\s+(?:and|und)\s+/gi
+
+const tokenizeFamily = (value: string): string[] => {
+  const normalized = normalize(value)
+  if (!normalized) {
+    return []
+  }
+  return Array.from(
+    new Set(
+      normalized
+        .split(FAMILY_SEPARATOR_PATTERN)
+        .map((token) => token.trim())
+        .filter(Boolean),
+    ),
+  )
+}
 
 const toRangeBounds = (startDate: string, endDate: string): { start: number; end: number } => {
   const start = new Date(`${startDate}T00:00:00.000Z`).valueOf()
@@ -146,7 +160,7 @@ const paginate = <T>(items: T[], limit: number, offset: number): T[] => {
 }
 
 const buildSummary30d = (detections: MockDetectionRecord[]) => {
-  const now = new Date(REFERENCE_NOW)
+  const now = new Date()
   const windowStart = new Date(now)
   windowStart.setDate(windowStart.getDate() - 29)
 
@@ -249,6 +263,34 @@ export const installBirdnetApiMocks = async (page: Page): Promise<void> => {
 
   await page.route('**/api/v2/summary/30d', async (route) => {
     await fulfillJson(route, summary)
+  })
+
+  await page.route('**/api/v2/family-matches**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const familyCommon = requestUrl.searchParams.get('familyCommon') ?? ''
+    const scientificName = normalize(requestUrl.searchParams.get('scientificName') ?? '')
+    const limit = Number(requestUrl.searchParams.get('limit') ?? '20')
+    const familyTokens = tokenizeFamily(familyCommon)
+    const matches = summary.archive.groups
+      .filter((entry: { scientific_name: string }) => normalize(entry.scientific_name) !== scientificName)
+      .filter((entry: { scientific_name: string }) => {
+        const info = SPECIES_INFO[normalize(entry.scientific_name)]
+        if (!info) {
+          return false
+        }
+        const entryTokens = tokenizeFamily(info.family_common)
+        return entryTokens.some((token) => familyTokens.includes(token))
+      })
+      .slice(0, Math.max(0, limit))
+      .map((entry: { common_name: string; scientific_name: string }) => ({
+        commonName: entry.common_name,
+        scientificName: entry.scientific_name,
+      }))
+
+    await fulfillJson(route, {
+      family_common: familyCommon,
+      matches,
+    })
   })
 
   // Register generic detections route BEFORE the more specific recent route.

@@ -18,6 +18,11 @@ export type SpeciesInfo = {
   source?: string
 }
 
+export type FamilyMatch = {
+  commonName: string
+  scientificName: string
+}
+
 type DetectionApiRecord = {
   id?: string | number
   common_name?: string
@@ -394,6 +399,38 @@ export const fetchSpeciesInfo = async ({
     familyCommon: data.taxonomy?.family_common,
     source: data.metadata?.source,
   }
+}
+
+export const fetchFamilyMatches = async ({
+  familyCommon,
+  scientificName,
+  limit = 20,
+  signal,
+}: {
+  familyCommon: string
+  scientificName?: string
+  limit?: number
+  signal?: AbortSignal
+}): Promise<FamilyMatch[]> => {
+  const params = new URLSearchParams({
+    familyCommon,
+    limit: String(limit),
+  })
+  if (scientificName) {
+    params.set('scientificName', scientificName)
+  }
+
+  const data = await requestJson<{
+    matches?: Array<{ commonName?: string; scientificName?: string }>
+  }>(buildApiUrl('/api/v2/family-matches', params), { signal })
+
+  const matches = Array.isArray(data?.matches) ? data.matches : []
+  return matches
+    .map((entry) => ({
+      commonName: String(entry?.commonName ?? '').trim(),
+      scientificName: String(entry?.scientificName ?? '').trim(),
+    }))
+    .filter((entry) => entry.commonName && entry.scientificName)
 }
 
 const normalize = (value: string) => {
