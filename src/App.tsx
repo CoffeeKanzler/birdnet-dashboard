@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getPhotoAttributionRecords } from './api/birdImages'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -142,7 +142,7 @@ const App = () => {
   ]
   const navItems: NavItem[] = allNavItems.filter((item) => HIGHLIGHTS_ENABLED || item.view !== 'rarity')
 
-  const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
+  const updateHistory = useCallback((state: AppRouteState, mode: 'push' | 'replace') => {
     const nextUrl = createRoute(state, locale, includeLocaleInRoute)
     if (mode === 'push') {
       window.history.pushState(null, '', nextUrl)
@@ -150,11 +150,11 @@ const App = () => {
     }
 
     window.history.replaceState(null, '', nextUrl)
-  }
+  }, [includeLocaleInRoute, locale])
 
   useEffect(() => {
     updateHistory(initialState, 'replace')
-  }, [initialState, includeLocaleInRoute, locale])
+  }, [initialState, updateHistory])
 
   useEffect(() => {
     const onAttributionUpdate = () => {
