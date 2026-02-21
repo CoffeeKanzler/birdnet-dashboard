@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { type Detection } from '../../api/birdnet'
 import { type NotableSpecies } from '../../data/notableSpecies'
 
-export type NotableSpotlight = {
+type NotableSpotlight = {
   species: NotableSpecies
   detectionCount: number
   lastSeenAt: Date | null

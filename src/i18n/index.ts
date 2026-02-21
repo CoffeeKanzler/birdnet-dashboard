@@ -7,7 +7,7 @@ type TranslationKey = keyof typeof de
 export const SUPPORTED_LOCALES = ['de', 'en'] as const
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
-export type SpeciesData = {
+type SpeciesData = {
   commonName?: string
   description?: string
   notability?: string

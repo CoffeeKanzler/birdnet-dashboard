@@ -1,4 +1,4 @@
-export type SpeciesDescription = {
+type SpeciesDescription = {
   commonName: string
   scientificName: string
   description: string

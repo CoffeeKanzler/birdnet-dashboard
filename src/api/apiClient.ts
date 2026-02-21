@@ -1,6 +1,6 @@
 import { getMockBirdnetJson } from '../demo/mockBirdnetApi'
 
-export type ApiClientErrorCode =
+type ApiClientErrorCode =
   | 'aborted'
   | 'timeout'
   | 'network'
