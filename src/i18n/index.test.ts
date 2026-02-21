@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { t, setLocale, getLocale, getSpeciesData, isSupportedLocale, resolveInitialLocale } from '.'
+import { t, setLocale, getLocale, getSpeciesData, isSupportedLocale, resolveInitialLocale, getLocalizedCommonName } from '.'
 
 beforeEach(() => {
   setLocale('de')
@@ -101,5 +101,32 @@ describe('getSpeciesData()', () => {
   it('returns empty object for unknown scientific name', () => {
     const data = getSpeciesData('Nonexistent species')
     expect(data).toEqual({})
+  })
+})
+
+describe('localized common name fallback', () => {
+  it('uses navigator locale and then defaults to de when nothing is valid', () => {
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: null,
+        navigatorLocale: 'en-US',
+        fallbackLocale: null,
+      }),
+    ).toBe('en')
+
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: null,
+        navigatorLocale: 'fr-FR',
+        fallbackLocale: null,
+      }),
+    ).toBe('de')
+  })
+
+  it('returns scientific name in English when no localized common name exists', () => {
+    setLocale('en')
+    expect(getLocalizedCommonName('Amsel', 'Unknown species')).toBe('Unknown species')
   })
 })

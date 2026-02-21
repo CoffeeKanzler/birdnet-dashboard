@@ -361,15 +361,78 @@ describe('App navigation and URL state', () => {
 
     expect(screen.getByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeInTheDocument()
     expect(screen.getByText('BirdNET-Go Backend')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'BirdNET-Go Repository oeffnen' })).toHaveAttribute(
-      'href',
-      'https://github.com/tphakala/birdnet-go',
-    )
+    const creditsLink = screen.getByRole('link', { name: 'BirdNET-Go Repository oeffnen' })
+    expect(creditsLink).toHaveAttribute('href', 'https://github.com/tphakala/birdnet-go')
+
+    const closeButton = screen.getByRole('button', { name: /Schlie/ })
+    await waitFor(() => {
+      expect(closeButton).toHaveFocus()
+    })
+
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })
+    expect(creditsLink).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Tab' })
+    expect(closeButton).toHaveFocus()
 
     fireEvent.keyDown(window, { key: 'Escape' })
     await waitFor(() => {
       expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
     })
+  })
+
+  it('renders attribution fallback and closes project credits via UI controls', async () => {
+    mocks.getPhotoAttributionRecords.mockReturnValue([
+      {
+        commonName: 'Amsel',
+        scientificName: 'Turdus merula',
+        hasImage: false,
+        sourceUrl: null,
+        author: null,
+        license: null,
+        licenseUrl: null,
+      },
+    ])
+
+    renderWithQuery(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bildnachweise' }))
+    expect(screen.getByText('Kein Bild geladen')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+    const creditsDialog = screen.getByRole('dialog', { name: 'Backend- und Projekt-Hinweise' })
+    fireEvent.click(creditsDialog.parentElement as HTMLElement)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+    fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
+    })
+  })
+
+  it('shows scroll-to-top button and scrolls smoothly to top', () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    renderWithQuery(<App />)
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 400,
+      writable: true,
+    })
+
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /nach oben/i }))
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
   })
 
   it('shows error boundary fallback when a view throws', () => {

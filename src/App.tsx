@@ -153,7 +153,7 @@ const App = () => {
   }
 
   useEffect(() => {
-    window.history.replaceState(null, '', createRoute(initialState, locale, includeLocaleInRoute))
+    updateHistory(initialState, 'replace')
   }, [initialState, includeLocaleInRoute, locale])
 
   useEffect(() => {
