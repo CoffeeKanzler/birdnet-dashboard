@@ -387,10 +387,10 @@ describe('App navigation and URL state', () => {
         commonName: 'Amsel',
         scientificName: 'Turdus merula',
         hasImage: false,
-        sourceUrl: null,
-        author: null,
-        license: null,
-        licenseUrl: null,
+        sourceUrl: '',
+        author: undefined,
+        license: undefined,
+        licenseUrl: undefined,
       },
     ])
 
