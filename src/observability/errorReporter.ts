@@ -8,7 +8,7 @@ type ReportFrontendErrorOptions = {
   metadata?: Record<string, ErrorMetadataValue>
 }
 
-export type FrontendErrorRecord = {
+type FrontendErrorRecord = {
   id: string
   source: string
   name: string

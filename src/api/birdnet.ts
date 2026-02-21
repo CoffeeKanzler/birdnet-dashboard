@@ -1,7 +1,5 @@
 import { ApiClientError, buildApiUrl, requestJson } from './apiClient'
 
-export { getApiBaseUrl } from './apiClient'
-
 export type Detection = {
   id: string
   commonName: string
@@ -10,7 +8,7 @@ export type Detection = {
   timestamp: string
 }
 
-export type SpeciesInfo = {
+type SpeciesInfo = {
   scientificName: string
   commonName: string
   rarityStatus?: string

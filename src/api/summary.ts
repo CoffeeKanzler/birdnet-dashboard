@@ -1,6 +1,6 @@
 import { buildApiUrl, requestJson } from './apiClient'
 
-export type SummarySpeciesCount = {
+type SummarySpeciesCount = {
   commonName: string
   scientificName: string
   count: number
