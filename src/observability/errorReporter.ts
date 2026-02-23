@@ -1,3 +1,5 @@
+import { getRuntimeConfigValue } from '../config/runtimeConfig'
+
 export const FRONTEND_ERROR_EVENT = 'birdnet-frontend-error'
 
 type ErrorMetadataValue = string | number | boolean | null
@@ -30,7 +32,7 @@ const createId = (): string => {
 }
 
 const toRelease = (): string => {
-  const value = import.meta.env.VITE_APP_VERSION ?? 'dev'
+  const value = getRuntimeConfigValue('VITE_APP_VERSION') ?? import.meta.env.VITE_APP_VERSION ?? 'dev'
   const normalized = value.trim()
   return normalized || 'dev'
 }

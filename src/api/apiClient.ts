@@ -1,3 +1,5 @@
+import { getRuntimeConfigValue } from '../config/runtimeConfig'
+
 export type ApiClientErrorCode =
   | 'aborted'
   | 'timeout'
@@ -64,7 +66,8 @@ export class ApiClientError extends Error {
 }
 
 export const getApiBaseUrl = (): string => {
-  const baseUrl = import.meta.env.VITE_BIRDNET_API_BASE_URL ?? ''
+  const baseUrl =
+    getRuntimeConfigValue('VITE_BIRDNET_API_BASE_URL') ?? import.meta.env.VITE_BIRDNET_API_BASE_URL ?? ''
   if (!baseUrl) {
     return ''
   }

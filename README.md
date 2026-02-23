@@ -9,6 +9,49 @@ Whitelabel-ready frontend for BirdNET-Go with fast cached navigation, precompute
 - Designed for small/self-hosted servers with limited CPU/RAM/traffic budget
 - Supports separate `dev` and `prod` deployments from the same codebase
 
+## Quick Start (Homelab / Docker)
+
+Use Docker for a functional deployment. The wrapper API/caching layer is part of the container runtime.
+
+You can start from `docker-compose.example.yml`. Minimal setup:
+
+```yaml
+services:
+  birdnet-go:
+    image: ghcr.io/tphakala/birdnet-go:latest
+    restart: unless-stopped
+
+  birdnet-dashboard:
+    image: ghcr.io/your-org/birdnet-dashboard:latest
+    restart: unless-stopped
+    depends_on:
+      - birdnet-go
+    environment:
+      - BIRDNET_API_BASE_URL=http://birdnet-go:8080
+      - SUMMARY_CACHE_FILE=/cache/summary-30d.json
+      - RECENT_CACHE_FILE=/cache/recent-detections.json
+      - FAMILY_CACHE_FILE=/cache/family-matches.json
+      - HEALTHCHECK_TOKEN=change-me
+      # Runtime frontend branding/config (no rebuild required)
+      - VITE_SITE_NAME=My Bird Dashboard
+      - VITE_SITE_TAGLINE=Live detections from my station.
+      - VITE_SITE_SUBTITLE=BirdNET-Go
+      - VITE_LOCALE=en
+      - VITE_DEFAULT_THEME=system
+    volumes:
+      - ./birdnet-dashboard-cache:/cache
+    ports:
+      - "8080:80"
+```
+
+Then run:
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://localhost:8080`.
+
 ## Key capabilities
 
 - Live landing page with auto-refresh
@@ -42,7 +85,9 @@ UI uses these to show degraded notices and avoid showing "Live" when data is sta
 
 ## Whitelabel configuration
 
-Whitelabel is controlled at build-time by `VITE_*` args.
+`VITE_*` values are runtime-configurable in Docker (written to `/runtime-config.js` at container startup).
+
+Build args are still supported for static/default values, but runtime env vars are preferred because you can retheme/repoint without rebuilding.
 
 ### Supported build args
 
@@ -72,13 +117,28 @@ These are evaluated inside the container at runtime:
 - `BIRDNET_API_BASE_URL` (default: `http://birdnet-go:8080`)
 - `SUMMARY_CACHE_FILE` (default: `/cache/summary-30d.json`)
 - `RECENT_CACHE_FILE` (default: `/cache/recent-detections.json`)
+- `FAMILY_CACHE_FILE` (default: `/cache/family-matches.json`)
 - `RECENT_SNAPSHOT_LIMIT` (default: `2000`)
 - `RECENT_REFRESH_MS` (default: `900000` / 15min)
 - `UPSTREAM_TIMEOUT_MS` (default: `12000`)
-- `READYZ_CACHE_MS` (default: `5000`)
-- `CACHEZ_STATUS_CACHE_MS` (default: `10000`)
 - `MAX_SUMMARY_PAGES` (default: `5000`)
+- `FAMILY_MATCH_TTL_MS` (default: `3600000`)
+- `FAMILY_PARTIAL_MATCH_TTL_MS` (default: `300000`)
+- `FAMILY_SPECIES_INFO_TTL_MS` (default: `86400000`)
+- `FAMILY_SPECIES_INFO_LOOKUP_BUDGET` (default: `50`)
+- `FAMILY_SPECIES_INFO_LOOKUP_CONCURRENCY` (default: `2`)
+- `FAMILY_MATCH_CANDIDATE_LIMIT` (default: `120`)
+- `FAMILY_RATE_LIMIT_COOLDOWN_MS` (default: `60000`)
+- `FAMILY_COMMON_MAX_LENGTH` (default: `120`)
+- `FAMILY_CACHE_MAX_ENTRIES` (default: `500`)
 - `HEALTHCHECK_TOKEN` (optional, required for external health probing)
+- `VITE_SITE_NAME` (optional runtime override for frontend branding)
+- `VITE_SITE_TAGLINE` (optional runtime override)
+- `VITE_SITE_SUBTITLE` (optional runtime override)
+- `VITE_LOCALE` (optional runtime override)
+- `VITE_DEFAULT_THEME` (optional runtime override)
+- `VITE_BIRDNET_API_BASE_URL` (optional runtime override)
+- `VITE_APP_VERSION` (optional runtime override)
 
 `INTERNAL_PROXY_VALUE` is generated automatically in `docker/start.sh` if not provided.
 
@@ -117,6 +177,7 @@ Allowed paths:
 - `GET/HEAD /api/v2/detections`
 - `GET/HEAD /api/v2/detections/recent`
 - `GET/HEAD /api/v2/species`
+- `GET/HEAD /api/v2/family-matches`
 
 All other `/api/*` return `404`.
 
@@ -129,14 +190,28 @@ When BirdNET-Go is down:
 - Archive/Highlights/Statistics: continue from cached summary snapshot
 - Species details may be limited if uncached upstream data is required
 
-## Local development
+## Frontend-only development
 
 ```bash
 nvm use
 npm ci
-git config core.hooksPath .githooks
 npm run dev
 ```
+
+Important: `npm run dev` starts only Vite (frontend).  
+It does not start the wrapper API server (`server/server.mjs`) or NGINX rules.
+
+If you want to test the full product behavior (proxy allowlist, cache headers, health endpoints, fallback mode), use Docker compose.
+
+Optional: for frontend work against a remote/local BirdNET API, set `VITE_BIRDNET_API_BASE_URL` in your shell or `.env`.
+
+## Upstream Compatibility
+
+This dashboard expects BirdNET API routes compatible with `tphakala/birdnet-go`, especially:
+
+- `GET /api/v2/detections`
+- `GET /api/v2/detections/recent`
+- `GET /api/v2/species`
 
 Pre-commit now runs:
 - Banned-term checks for sensitive identifiers in staged content

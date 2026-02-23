@@ -12,6 +12,7 @@ describe('errorReporter', () => {
     clearFrontendErrorRecords()
     vi.restoreAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    delete window.__BIRDNET_CONFIG__
   })
 
   it('records error events with metadata', () => {
@@ -51,5 +52,17 @@ describe('errorReporter', () => {
     expect(records).toHaveLength(200)
     expect(records[0]?.message).toBe('error-5')
     expect(records[199]?.message).toBe('error-204')
+  })
+
+  it('uses runtime app version when configured', () => {
+    window.__BIRDNET_CONFIG__ = { VITE_APP_VERSION: 'runtime-v1' }
+
+    reportFrontendError({
+      source: 'runtime-version-test',
+      error: new Error('Boom'),
+    })
+
+    const records = getFrontendErrorRecords()
+    expect(records[0]?.release).toBe('runtime-v1')
   })
 })

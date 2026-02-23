@@ -151,27 +151,27 @@ describe('App navigation and URL state', () => {
     renderWithQuery(<App />)
 
     expect(screen.getByText('Landing View')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=landing')
+    expect(window.location.search).toContain('view=landing')
 
     fireEvent.click(screen.getByRole('button', { name: 'Archiv' }))
     expect(screen.getByText('Detections View: archive')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=archive')
+    expect(window.location.search).toContain('view=archive')
 
     fireEvent.click(screen.getByRole('button', { name: 'Highlights' }))
     expect(screen.getByText('Rarity View')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=rarity')
+    expect(window.location.search).toContain('view=rarity')
 
     fireEvent.click(screen.getByRole('button', { name: 'Statistik' }))
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=stats')
+    expect(window.location.search).toContain('view=stats')
 
     fireEvent.click(screen.getByRole('button', { name: 'Heute' }))
     expect(screen.getByText('Detections View: today')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=today')
+    expect(window.location.search).toContain('view=today')
 
     fireEvent.click(screen.getByRole('button', { name: 'Live' }))
     expect(screen.getByText('Landing View')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=landing')
+    expect(window.location.search).toContain('view=landing')
   })
 
   it('navigates to stats view via deep link and supports back navigation from species', () => {
@@ -180,7 +180,7 @@ describe('App navigation and URL state', () => {
     renderWithQuery(<App />)
 
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=stats')
+    expect(window.location.search).toContain('view=stats')
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Eisvogel' }))
     expect(window.location.search).toContain('view=species')
@@ -188,7 +188,7 @@ describe('App navigation and URL state', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=stats')
+    expect(window.location.search).toContain('view=stats')
   })
 
   it('parses species route and returns to source view on back', () => {
@@ -205,7 +205,7 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
 
     expect(screen.getByText('Detections View: archive')).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=archive')
+    expect(window.location.search).toContain('view=archive')
   })
 
   it('handles species selection from non-main view and popstate updates', async () => {
@@ -330,6 +330,23 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('dialog').parentElement as HTMLElement)
     await waitFor(() => {
       expect(screen.queryByRole('heading', { name: 'Wikimedia/Wikipedia Lizenzen' })).toBeNull()
+    })
+  })
+
+  it('opens project credits modal from footer', async () => {
+    renderWithQuery(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+    expect(screen.getByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeInTheDocument()
+    expect(screen.getByText(/BirdNET-Go Backend/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'BirdNET-Go Repository oeffnen' })).toHaveAttribute(
+      'href',
+      'https://github.com/tphakala/birdnet-go',
+    )
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
     })
   })
 

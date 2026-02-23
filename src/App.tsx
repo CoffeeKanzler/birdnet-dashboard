@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getPhotoAttributionRecords } from './api/birdImages'
 import ErrorBoundary from './components/ErrorBoundary'
 import { siteConfig } from './config/site'
-import { t } from './i18n'
+import { setLocale, t } from './i18n'
 import DetectionsView from './features/detections/DetectionsView'
 import { useBackgroundCacheWarmer } from './features/detections/useBackgroundCacheWarmer'
 import LandingView from './features/landing/LandingView'
@@ -23,23 +23,18 @@ type AppRouteState = {
   view: AppView
   lastMainView: 'today' | 'archive' | 'rarity' | 'stats'
   selectedSpecies: SelectedSpecies | null
+  locale: Locale
 }
 
 type ThemeMode = 'light' | 'dark'
+type ModalView = 'attribution' | 'credits'
+type Locale = 'de' | 'en'
 type NavItem = {
   view: MainView
   label: string
 }
 
 const THEME_STORAGE_KEY = 'birdnet-showoff-theme'
-const NAV_ITEMS: NavItem[] = [
-  { view: 'landing', label: t('nav.live') },
-  { view: 'today', label: t('nav.today') },
-  { view: 'archive', label: t('nav.archive') },
-  { view: 'rarity', label: t('nav.highlights') },
-  { view: 'stats', label: t('nav.stats') },
-]
-
 const getInitialTheme = (): ThemeMode => {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -53,9 +48,14 @@ const getInitialTheme = (): ThemeMode => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+const toLocale = (value: string | null | undefined): Locale => {
+  return value === 'en' ? 'en' : 'de'
+}
+
 const parseRouteState = (): AppRouteState => {
   const params = new URLSearchParams(window.location.search)
   const routeView = params.get('view')
+  const locale = toLocale(params.get('lang') ?? siteConfig.locale)
 
   if (routeView === 'species') {
     const commonName = params.get('common')?.trim() ?? ''
@@ -71,6 +71,7 @@ const parseRouteState = (): AppRouteState => {
         view: 'species',
         lastMainView,
         selectedSpecies: { commonName, scientificName },
+        locale,
       }
     }
   }
@@ -80,6 +81,7 @@ const parseRouteState = (): AppRouteState => {
       view: routeView,
       lastMainView: routeView,
       selectedSpecies: null,
+      locale,
     }
   }
 
@@ -87,11 +89,13 @@ const parseRouteState = (): AppRouteState => {
     view: 'landing',
     lastMainView: 'today',
     selectedSpecies: null,
+    locale,
   }
 }
 
 const createRoute = (state: AppRouteState): string => {
   const params = new URLSearchParams()
+  params.set('lang', state.locale)
 
   if (state.view === 'species' && state.selectedSpecies) {
     params.set('view', 'species')
@@ -109,6 +113,7 @@ const createRoute = (state: AppRouteState): string => {
 const App = () => {
   const [initialState] = useState<AppRouteState>(() => parseRouteState())
   const [view, setView] = useState<AppView>(initialState.view)
+  const [locale, setCurrentLocale] = useState<Locale>(initialState.locale)
   const [lastMainView, setLastMainView] = useState<'today' | 'archive' | 'rarity' | 'stats'>(
     initialState.lastMainView,
   )
@@ -118,12 +123,21 @@ const App = () => {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
   const [isHeaderCondensed, setIsHeaderCondensed] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
-  const [isAttributionOpen, setIsAttributionOpen] = useState(false)
+  const [activeModal, setActiveModal] = useState<ModalView | null>(null)
   const [, setAttributionVersion] = useState(0)
-  const attributionDialogRef = useRef<HTMLDivElement | null>(null)
-  const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
+  const modalDialogRef = useRef<HTMLDivElement | null>(null)
+  const modalCloseRef = useRef<HTMLButtonElement | null>(null)
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
+  setLocale(locale)
+
+  const navItems: NavItem[] = [
+    { view: 'landing', label: t('nav.live') },
+    { view: 'today', label: t('nav.today') },
+    { view: 'archive', label: t('nav.archive') },
+    { view: 'rarity', label: t('nav.highlights') },
+    { view: 'stats', label: t('nav.stats') },
+  ]
 
   const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
     const nextUrl = createRoute(state)
@@ -138,6 +152,10 @@ const App = () => {
   useEffect(() => {
     window.history.replaceState(null, '', createRoute(initialState))
   }, [initialState])
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
 
   useEffect(() => {
     const onAttributionUpdate = () => {
@@ -169,6 +187,7 @@ const App = () => {
       setView(next.view)
       setLastMainView(next.lastMainView)
       setSelectedSpecies(next.selectedSpecies)
+      setCurrentLocale(next.locale)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -215,6 +234,7 @@ const App = () => {
         view: nextView,
         lastMainView: nextLastMainView,
         selectedSpecies: null,
+        locale,
       },
       'push',
     )
@@ -236,6 +256,7 @@ const App = () => {
         view: 'species',
         lastMainView: sourceView,
         selectedSpecies: species,
+        locale,
       },
       'push',
     )
@@ -250,6 +271,7 @@ const App = () => {
         view: lastMainView,
         lastMainView,
         selectedSpecies: null,
+        locale,
       },
       'push',
     )
@@ -257,7 +279,7 @@ const App = () => {
   }
 
   useEffect(() => {
-    if (!isAttributionOpen) {
+    if (!activeModal) {
       return
     }
 
@@ -274,19 +296,19 @@ const App = () => {
       document.body.style.overflow = previousOverflow
       document.body.style.paddingRight = previousPaddingRight
     }
-  }, [isAttributionOpen])
+  }, [activeModal])
 
   useEffect(() => {
-    if (!isAttributionOpen) {
+    if (!activeModal) {
       return
     }
 
-    attributionCloseRef.current?.focus()
+    modalCloseRef.current?.focus()
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        setIsAttributionOpen(false)
+        setActiveModal(null)
         return
       }
 
@@ -294,7 +316,7 @@ const App = () => {
         return
       }
 
-      const dialog = attributionDialogRef.current
+      const dialog = modalDialogRef.current
       if (!dialog) {
         return
       }
@@ -324,11 +346,11 @@ const App = () => {
     return () => {
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [isAttributionOpen])
+  }, [activeModal])
 
   const activeNavigationView = view
   const openAttribution = () => {
-    setIsAttributionOpen(true)
+    setActiveModal('attribution')
   }
 
   return (
@@ -361,6 +383,27 @@ const App = () => {
             </p>
           </div>
           <div className="flex w-full items-stretch gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/80 p-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:w-auto sm:overflow-visible">
+            <button
+              aria-label={locale === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}
+              className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              onClick={() => {
+                const nextLocale: Locale = locale === 'de' ? 'en' : 'de'
+                setCurrentLocale(nextLocale)
+                updateHistory(
+                  {
+                    view,
+                    lastMainView,
+                    selectedSpecies,
+                    locale: nextLocale,
+                  },
+                  'replace',
+                )
+              }}
+              title={locale === 'de' ? 'English' : 'Deutsch'}
+              type="button"
+            >
+              {locale === 'de' ? 'EN' : 'DE'}
+            </button>
             <button
               aria-label={theme === 'dark' ? t('theme.activateLight') : t('theme.activateDark')}
               className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
@@ -400,7 +443,7 @@ const App = () => {
                 <span className="hidden sm:inline">{theme === 'dark' ? t('theme.light') : t('theme.dark')}</span>
               </span>
             </button>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <button
                 className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
                   activeNavigationView === item.view
@@ -478,11 +521,21 @@ const App = () => {
           <button
             className="font-semibold text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
             onClick={() => {
-              setIsAttributionOpen(true)
+              setActiveModal('attribution')
             }}
             type="button"
           >
             {t('attribution.linkLabel')}
+          </button>
+          {' · '}
+          <button
+            className="font-semibold text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
+            onClick={() => {
+              setActiveModal('credits')
+            }}
+            type="button"
+          >
+            {t('credits.linkLabel')}
           </button>
         </p>
       </main>
@@ -512,36 +565,39 @@ const App = () => {
         </button>
       ) : null}
 
-      {isAttributionOpen ? (
+      {activeModal ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
-              setIsAttributionOpen(false)
+              setActiveModal(null)
             }
           }}
         >
           <div
-            aria-labelledby="attribution-heading"
+            aria-labelledby={activeModal === 'attribution' ? 'attribution-heading' : 'credits-heading'}
             aria-modal="true"
             className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
-            ref={attributionDialogRef}
+            ref={modalDialogRef}
             role="dialog"
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
-                  {t('attribution.modalLabel')}
+                  {activeModal === 'attribution' ? t('attribution.modalLabel') : t('credits.modalLabel')}
                 </p>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100" id="attribution-heading">
-                  {t('attribution.modalHeading')}
+                <h2
+                  className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+                  id={activeModal === 'attribution' ? 'attribution-heading' : 'credits-heading'}
+                >
+                  {activeModal === 'attribution' ? t('attribution.modalHeading') : t('credits.modalHeading')}
                 </h2>
               </div>
               <button
                 className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-700"
-                ref={attributionCloseRef}
+                ref={modalCloseRef}
                 onClick={() => {
-                  setIsAttributionOpen(false)
+                  setActiveModal(null)
                 }}
                 type="button"
               >
@@ -550,81 +606,101 @@ const App = () => {
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
-              <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-                {t('attribution.modalDescription')}
-              </p>
-              {attributionRecords.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {t('attribution.emptyState')}
-                </p>
+              {activeModal === 'attribution' ? (
+                <>
+                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                    {t('attribution.modalDescription')}
+                  </p>
+                  {attributionRecords.length === 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {t('attribution.emptyState')}
+                    </p>
+                  ) : (
+                    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                      <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm dark:divide-slate-700 dark:bg-slate-900">
+                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          <tr>
+                            <th className="px-3 py-3 font-semibold" scope="col">
+                              {t('attribution.columnSpecies')}
+                            </th>
+                            <th className="px-3 py-3 font-semibold" scope="col">
+                              {t('attribution.columnAuthor')}
+                            </th>
+                            <th className="px-3 py-3 font-semibold" scope="col">
+                              {t('attribution.columnLicense')}
+                            </th>
+                            <th className="px-3 py-3 font-semibold" scope="col">
+                              {t('attribution.columnSource')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                          {attributionRecords.map((record) => (
+                            <tr
+                              className="align-top"
+                              key={`${record.commonName}|${record.scientificName}|${record.sourceUrl || 'none'}`}
+                            >
+                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                                <p className="font-semibold text-slate-800 dark:text-slate-100">{record.commonName}</p>
+                                <p className="text-slate-500 dark:text-slate-400">{record.scientificName}</p>
+                              </td>
+                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                                {record.author || record.credit || t('attribution.notSpecified')}
+                              </td>
+                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                                {record.license ? (
+                                  record.licenseUrl ? (
+                                    <a
+                                      className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                                      href={record.licenseUrl}
+                                      rel="noopener noreferrer"
+                                      target="_blank"
+                                    >
+                                      {record.license}
+                                    </a>
+                                  ) : (
+                                    record.license
+                                  )
+                                ) : (
+                                  t('attribution.notSpecified')
+                                )}
+                              </td>
+                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                                {record.sourceUrl ? (
+                                  <a
+                                    className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                                    href={record.sourceUrl}
+                                    rel="noopener noreferrer"
+                                    target="_blank"
+                                  >
+                                    {t('attribution.wikimediaSource')}
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-500 dark:text-slate-400">{t('attribution.noImageLoaded')}</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                  <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm dark:divide-slate-700 dark:bg-slate-900">
-                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                      <tr>
-                        <th className="px-3 py-3 font-semibold" scope="col">
-                          {t('attribution.columnSpecies')}
-                        </th>
-                        <th className="px-3 py-3 font-semibold" scope="col">
-                          {t('attribution.columnAuthor')}
-                        </th>
-                        <th className="px-3 py-3 font-semibold" scope="col">
-                          {t('attribution.columnLicense')}
-                        </th>
-                        <th className="px-3 py-3 font-semibold" scope="col">
-                          {t('attribution.columnSource')}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {attributionRecords.map((record) => (
-                        <tr
-                          className="align-top"
-                          key={`${record.commonName}|${record.scientificName}|${record.sourceUrl || 'none'}`}
-                        >
-                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                            <p className="font-semibold text-slate-800 dark:text-slate-100">{record.commonName}</p>
-                            <p className="text-slate-500 dark:text-slate-400">{record.scientificName}</p>
-                          </td>
-                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                            {record.author || record.credit || t('attribution.notSpecified')}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                            {record.license ? (
-                              record.licenseUrl ? (
-                                <a
-                                  className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
-                                  href={record.licenseUrl}
-                                  rel="noopener noreferrer"
-                                  target="_blank"
-                                >
-                                  {record.license}
-                                </a>
-                              ) : (
-                                record.license
-                              )
-                            ) : (
-                              t('attribution.notSpecified')
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                            {record.sourceUrl ? (
-                              <a
-                                className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
-                                href={record.sourceUrl}
-                                rel="noopener noreferrer"
-                                target="_blank"
-                              >
-                                {t('attribution.wikimediaSource')}
-                              </a>
-                            ) : (
-                              <span className="text-slate-500 dark:text-slate-400">{t('attribution.noImageLoaded')}</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300">
+                  <p>{t('credits.modalDescription')}</p>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{t('credits.backendTitle')}</p>
+                    <p className="mt-2">{t('credits.backendDescription')}</p>
+                    <a
+                      className="mt-2 inline-block font-semibold text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                      href="https://github.com/tphakala/birdnet-go"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      {t('credits.backendLinkLabel')}
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
