@@ -10,7 +10,7 @@ import { queryKeys } from '../../api/queryKeys'
 import { siteConfig } from '../../config/site'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
-import { getSpeciesData, t } from '../../i18n'
+import { getLocalizedCommonName, getSpeciesData, t } from '../../i18n'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
@@ -98,6 +98,7 @@ const SpeciesDetailView = ({
   onAttributionOpen,
   onSpeciesSelect,
 }: SpeciesDetailViewProps) => {
+  const displayCommonName = getLocalizedCommonName(commonName, scientificName)
   const queryClient = useQueryClient()
   const { detections, isLoading, error, refresh } = useSpeciesDetections(
     commonName,
@@ -217,8 +218,8 @@ const SpeciesDetailView = ({
       return curatedDescription.description
     }
 
-    return t('species.fallbackDescription', { commonName, scientificName })
-  }, [commonName, scientificName])
+    return t('species.fallbackDescription', { commonName: displayCommonName, scientificName })
+  }, [commonName, displayCommonName, scientificName])
 
   const descriptionLabel = useMemo(() => withUmlauts(description), [description])
 
@@ -229,7 +230,7 @@ const SpeciesDetailView = ({
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
             {t('species.sectionLabel')}
           </p>
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{commonName}</h2>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{displayCommonName}</h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{scientificName}</p>
         </div>
         <button
@@ -245,7 +246,7 @@ const SpeciesDetailView = ({
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
           {photo ? (
             <img
-              alt={t('attribution.photoOf', { name: commonName })}
+              alt={t('attribution.photoOf', { name: displayCommonName })}
               className="h-full w-full object-cover"
               decoding="async"
               height={photo.height ?? FALLBACK_HEIGHT}
@@ -354,13 +355,13 @@ const SpeciesDetailView = ({
                     key={`${entry.scientificName}-${entry.commonName}`}
                     onClick={() => {
                       onSpeciesSelect?.({
-                        commonName: entry.commonName,
+                        commonName: getLocalizedCommonName(entry.commonName, entry.scientificName),
                         scientificName: entry.scientificName,
                       })
                     }}
                     type="button"
                   >
-                    {entry.commonName}
+                    {getLocalizedCommonName(entry.commonName, entry.scientificName)}
                   </button>
                 ))}
               </div>

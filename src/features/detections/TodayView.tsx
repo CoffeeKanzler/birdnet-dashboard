@@ -2,7 +2,7 @@ import { useMemo, useState, type RefObject } from 'react'
 
 import { type Detection } from '../../api/birdnet'
 import { siteConfig } from '../../config/site'
-import { t } from '../../i18n'
+import { getLocalizedCommonName, t } from '../../i18n'
 import SpeciesCard from './components/SpeciesCard'
 
 const formatTimestamp = (value: string): string => {
@@ -102,9 +102,12 @@ const TodayView = ({
     }
 
     return detections.filter((detection) => {
-      const commonName = detection.commonName?.trim() || t('common.unknownSpecies')
       const scientificName =
         detection.scientificName?.trim() || t('common.unknownSpecies')
+      const commonName = getLocalizedCommonName(
+        detection.commonName?.trim() || t('common.unknownSpecies'),
+        scientificName,
+      )
       return matchesFilter(commonName, scientificName)
     })
   }, [detections, matchesFilter, normalizedFilter])
@@ -148,9 +151,12 @@ const TodayView = ({
     >()
 
     for (const detection of todayDetections) {
-      const commonName = detection.commonName?.trim() || t('common.unknownSpecies')
       const scientificName =
         detection.scientificName?.trim() || t('common.unknownSpecies')
+      const commonName = getLocalizedCommonName(
+        detection.commonName?.trim() || t('common.unknownSpecies'),
+        scientificName,
+      )
       if (!matchesFilter(commonName, scientificName)) {
         continue
       }
@@ -373,7 +379,7 @@ const TodayView = ({
                 >
                   <div>
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                      {detection.commonName}
+                      {getLocalizedCommonName(detection.commonName, detection.scientificName)}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {detection.scientificName}

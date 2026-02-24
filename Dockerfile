@@ -27,7 +27,7 @@ RUN npm run build
 
 FROM nginx:alpine
 
-RUN apk add --no-cache nodejs libcap \
+RUN apk add --no-cache nodejs libcap su-exec \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
 
 WORKDIR /app
@@ -45,7 +45,5 @@ EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -q -T 4 -O - http://127.0.0.1/healthz >/dev/null || exit 1
-
-USER nginx
 
 CMD ["/start.sh"]

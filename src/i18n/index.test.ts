@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { t, setLocale, getLocale, getSpeciesData } from '.'
+import { t, setLocale, getLocale, getSpeciesData, isSupportedLocale, resolveInitialLocale, getLocalizedCommonName } from '.'
 
 beforeEach(() => {
   setLocale('de')
@@ -31,6 +31,48 @@ describe('setLocale() / getLocale()', () => {
     setLocale('en')
     expect(getLocale()).toBe('en')
   })
+
+  it('falls back to de for unsupported locale', () => {
+    setLocale('fr')
+    expect(getLocale()).toBe('de')
+  })
+})
+
+describe('locale helpers', () => {
+  it('validates supported locales', () => {
+    expect(isSupportedLocale('de')).toBe(true)
+    expect(isSupportedLocale('en')).toBe(true)
+    expect(isSupportedLocale('fr')).toBe(false)
+  })
+
+  it('resolves initial locale by precedence (url > storage > fallback > navigator)', () => {
+    expect(
+      resolveInitialLocale({
+        urlLocale: 'en',
+        storedLocale: 'de',
+        navigatorLocale: 'de-DE',
+        fallbackLocale: 'de',
+      }),
+    ).toBe('en')
+
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: 'en',
+        navigatorLocale: 'de-DE',
+        fallbackLocale: 'de',
+      }),
+    ).toBe('en')
+
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: null,
+        navigatorLocale: 'en-US',
+        fallbackLocale: 'de',
+      }),
+    ).toBe('de')
+  })
 })
 
 describe('getSpeciesData()', () => {
@@ -59,5 +101,32 @@ describe('getSpeciesData()', () => {
   it('returns empty object for unknown scientific name', () => {
     const data = getSpeciesData('Nonexistent species')
     expect(data).toEqual({})
+  })
+})
+
+describe('localized common name fallback', () => {
+  it('uses navigator locale and then defaults to de when nothing is valid', () => {
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: null,
+        navigatorLocale: 'en-US',
+        fallbackLocale: null,
+      }),
+    ).toBe('en')
+
+    expect(
+      resolveInitialLocale({
+        urlLocale: null,
+        storedLocale: null,
+        navigatorLocale: 'fr-FR',
+        fallbackLocale: null,
+      }),
+    ).toBe('de')
+  })
+
+  it('returns scientific name in English when no localized common name exists', () => {
+    setLocale('en')
+    expect(getLocalizedCommonName('Amsel', 'Unknown species')).toBe('Unknown species')
   })
 })

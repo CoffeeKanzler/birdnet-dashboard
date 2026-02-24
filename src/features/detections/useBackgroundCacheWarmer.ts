@@ -5,7 +5,7 @@ const RECENT_WARM_URL = '/api/v2/detections/recent?limit=30'
 
 export function useBackgroundCacheWarmer(enabled = true): void {
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || import.meta.env.VITE_DEMO_MODE === 'true') {
       return
     }
 

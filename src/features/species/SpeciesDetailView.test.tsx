@@ -27,6 +27,7 @@ vi.mock('../../api/birdnet', () => ({
 vi.mock('../../i18n', () => ({
   t: (key: string) => key,
   getSpeciesData: () => ({ description: '' }),
+  getLocalizedCommonName: (commonName: string) => commonName,
 }))
 
 describe('SpeciesDetailView', () => {

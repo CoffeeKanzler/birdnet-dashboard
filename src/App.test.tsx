@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PhotoAttributionRecord } from './api/birdImages'
 import App from './App'
+import { setLocale } from './i18n'
 import { renderWithQuery } from './test/renderWithQuery'
 
 const mocks = vi.hoisted(() => {
@@ -143,6 +144,8 @@ describe('App navigation and URL state', () => {
     mocks.getPhotoAttributionRecords.mockReset()
     mocks.getPhotoAttributionRecords.mockReturnValue([])
     mocks.throwLandingView = false
+    setLocale('de')
+    document.documentElement.lang = 'de'
     window.localStorage.clear()
     window.history.replaceState(null, '', '/')
   })
@@ -151,27 +154,27 @@ describe('App navigation and URL state', () => {
     renderWithQuery(<App />)
 
     expect(screen.getByText('Landing View')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=landing')
+    expect(window.location.search).toBe('?view=landing')
 
     fireEvent.click(screen.getByRole('button', { name: 'Archiv' }))
     expect(screen.getByText('Detections View: archive')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=archive')
+    expect(window.location.search).toBe('?view=archive')
 
     fireEvent.click(screen.getByRole('button', { name: 'Highlights' }))
     expect(screen.getByText('Rarity View')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=rarity')
+    expect(window.location.search).toBe('?view=rarity')
 
     fireEvent.click(screen.getByRole('button', { name: 'Statistik' }))
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=stats')
+    expect(window.location.search).toBe('?view=stats')
 
     fireEvent.click(screen.getByRole('button', { name: 'Heute' }))
     expect(screen.getByText('Detections View: today')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=today')
+    expect(window.location.search).toBe('?view=today')
 
     fireEvent.click(screen.getByRole('button', { name: 'Live' }))
     expect(screen.getByText('Landing View')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=landing')
+    expect(window.location.search).toBe('?view=landing')
   })
 
   it('navigates to stats view via deep link and supports back navigation from species', () => {
@@ -180,32 +183,50 @@ describe('App navigation and URL state', () => {
     renderWithQuery(<App />)
 
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=stats')
+    expect(window.location.search).toBe('?view=stats')
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Eisvogel' }))
     expect(window.location.search).toContain('view=species')
     expect(window.location.search).toContain('from=stats')
+    expect(window.location.search).toContain('scientific=Alcedo+atthis')
+    expect(window.location.search).not.toContain('common=')
 
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
     expect(screen.getByText('Statistics View')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=stats')
+    expect(window.location.search).toBe('?view=stats')
   })
 
-  it('parses species route and returns to source view on back', () => {
+  it('switches language at runtime and persists locale in URL/localStorage', async () => {
+    renderWithQuery(<App />)
+
+    expect(screen.getByRole('button', { name: 'Heute' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sprache' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument()
+    })
+
+    expect(document.documentElement.lang).toBe('en')
+    expect(window.localStorage.getItem('birdnet-showoff-locale')).toBe('en')
+    expect(window.location.search).toContain('lang=en')
+  })
+
+  it('parses scientific-only species route and returns to source view on back', () => {
     window.history.replaceState(
       null,
       '',
-      '/?view=species&from=archive&common=Barn%20Owl&scientific=Tyto%20alba',
+      '/?view=species&from=archive&scientific=Tyto%20alba',
     )
 
     renderWithQuery(<App />)
 
-    expect(screen.getByText('Species Detail: Barn Owl (Tyto alba)')).toBeInTheDocument()
+    expect(screen.getByText('Species Detail: Tyto alba (Tyto alba)')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Back To Source' }))
 
     expect(screen.getByText('Detections View: archive')).toBeInTheDocument()
-    expect(window.location.search).toContain('view=archive')
+    expect(window.location.search).toBe('?view=archive')
   })
 
   it('handles species selection from non-main view and popstate updates', async () => {
@@ -228,6 +249,7 @@ describe('App navigation and URL state', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select Barn Owl' }))
     expect(screen.getByText('Species Detail: Barn Owl (Tyto alba)')).toBeInTheDocument()
     expect(window.location.search).toContain('view=species')
+    expect(window.location.search).not.toContain('common=')
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Related Species' }))
     expect(screen.getByText('Species Detail: Song Thrush (Turdus philomelos)')).toBeInTheDocument()
@@ -335,19 +357,82 @@ describe('App navigation and URL state', () => {
 
   it('opens project credits modal from footer', async () => {
     renderWithQuery(<App />)
-
     fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+
     expect(screen.getByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeInTheDocument()
-    expect(screen.getByText(/BirdNET-Go Backend/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'BirdNET-Go Repository oeffnen' })).toHaveAttribute(
-      'href',
-      'https://github.com/tphakala/birdnet-go',
-    )
+    expect(screen.getByText('BirdNET-Go Backend')).toBeInTheDocument()
+    const creditsLink = screen.getByRole('link', { name: 'BirdNET-Go Repository oeffnen' })
+    expect(creditsLink).toHaveAttribute('href', 'https://github.com/tphakala/birdnet-go')
+
+    const closeButton = screen.getByRole('button', { name: /Schlie/ })
+    await waitFor(() => {
+      expect(closeButton).toHaveFocus()
+    })
+
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })
+    expect(creditsLink).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Tab' })
+    expect(closeButton).toHaveFocus()
 
     fireEvent.keyDown(window, { key: 'Escape' })
     await waitFor(() => {
       expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
     })
+  })
+
+  it('renders attribution fallback and closes project credits via UI controls', async () => {
+    mocks.getPhotoAttributionRecords.mockReturnValue([
+      {
+        commonName: 'Amsel',
+        scientificName: 'Turdus merula',
+        hasImage: false,
+        sourceUrl: '',
+        author: undefined,
+        license: undefined,
+        licenseUrl: undefined,
+      },
+    ])
+
+    renderWithQuery(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bildnachweise' }))
+    expect(screen.getByText('Kein Bild geladen')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+    const creditsDialog = screen.getByRole('dialog', { name: 'Backend- und Projekt-Hinweise' })
+    fireEvent.click(creditsDialog.parentElement as HTMLElement)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Projekt-Hinweise' }))
+    fireEvent.click(screen.getByRole('button', { name: /Schlie/ }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Backend- und Projekt-Hinweise' })).toBeNull()
+    })
+  })
+
+  it('shows scroll-to-top button and scrolls smoothly to top', () => {
+    const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    renderWithQuery(<App />)
+
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: 400,
+      writable: true,
+    })
+
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /nach oben/i }))
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
   })
 
   it('shows error boundary fallback when a view throws', () => {

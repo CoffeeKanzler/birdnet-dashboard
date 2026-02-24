@@ -15,6 +15,7 @@ const localeMap: Record<string, string> = {
 
 const locale = getRuntimeConfigValue('VITE_LOCALE') ?? import.meta.env.VITE_LOCALE ?? 'de'
 const dateLocale = localeMap[locale] || 'de-DE'
+const enableHighlights = import.meta.env.VITE_ENABLE_HIGHLIGHTS !== 'false'
 
 export const siteConfig = {
   siteName: getRuntimeConfigValue('VITE_SITE_NAME') ?? import.meta.env.VITE_SITE_NAME ?? 'BirdNET Dashboard',
@@ -28,4 +29,5 @@ export const siteConfig = {
       | 'dark'
       | 'system',
   appVersion: getRuntimeConfigValue('VITE_APP_VERSION') ?? import.meta.env.VITE_APP_VERSION ?? '',
+  enableHighlights,
 } as const

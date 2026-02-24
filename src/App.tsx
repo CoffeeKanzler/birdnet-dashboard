@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getPhotoAttributionRecords } from './api/birdImages'
 import ErrorBoundary from './components/ErrorBoundary'
 import { siteConfig } from './config/site'
-import { setLocale, t } from './i18n'
+import { getLocale, isSupportedLocale, setLocale, t, type SupportedLocale } from './i18n'
 import DetectionsView from './features/detections/DetectionsView'
 import { useBackgroundCacheWarmer } from './features/detections/useBackgroundCacheWarmer'
 import LandingView from './features/landing/LandingView'
@@ -23,18 +23,23 @@ type AppRouteState = {
   view: AppView
   lastMainView: 'today' | 'archive' | 'rarity' | 'stats'
   selectedSpecies: SelectedSpecies | null
-  locale: Locale
 }
 
 type ThemeMode = 'light' | 'dark'
-type ModalView = 'attribution' | 'credits'
-type Locale = 'de' | 'en'
 type NavItem = {
   view: MainView
   label: string
 }
 
 const THEME_STORAGE_KEY = 'birdnet-showoff-theme'
+const LOCALE_STORAGE_KEY = 'birdnet-showoff-locale'
+const HIGHLIGHTS_ENABLED = siteConfig.enableHighlights
+
+const getRouteLocale = (): SupportedLocale | null => {
+  const locale = new URLSearchParams(window.location.search).get('lang')
+  return isSupportedLocale(locale) ? locale : null
+}
+
 const getInitialTheme = (): ThemeMode => {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -48,40 +53,33 @@ const getInitialTheme = (): ThemeMode => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-const toLocale = (value: string | null | undefined): Locale => {
-  return value === 'en' ? 'en' : 'de'
-}
-
 const parseRouteState = (): AppRouteState => {
   const params = new URLSearchParams(window.location.search)
   const routeView = params.get('view')
-  const locale = toLocale(params.get('lang') ?? siteConfig.locale)
 
   if (routeView === 'species') {
     const commonName = params.get('common')?.trim() ?? ''
     const scientificName = params.get('scientific')?.trim() ?? ''
     const from = params.get('from')
-    const lastMainView =
-      from === 'today' || from === 'archive' || from === 'rarity' || from === 'stats'
-        ? from
-        : 'today'
+    const requestedFrom =
+      from === 'today' || from === 'archive' || from === 'rarity' || from === 'stats' ? from : 'today'
+    const lastMainView = !HIGHLIGHTS_ENABLED && requestedFrom === 'rarity' ? 'today' : requestedFrom
 
-    if (commonName && scientificName) {
+    if (scientificName) {
       return {
         view: 'species',
         lastMainView,
-        selectedSpecies: { commonName, scientificName },
-        locale,
+        selectedSpecies: { commonName: commonName || scientificName, scientificName },
       }
     }
   }
 
   if (routeView === 'today' || routeView === 'archive' || routeView === 'rarity' || routeView === 'stats') {
+    const normalizedView = !HIGHLIGHTS_ENABLED && routeView === 'rarity' ? 'today' : routeView
     return {
-      view: routeView,
-      lastMainView: routeView,
+      view: normalizedView,
+      lastMainView: normalizedView,
       selectedSpecies: null,
-      locale,
     }
   }
 
@@ -89,21 +87,22 @@ const parseRouteState = (): AppRouteState => {
     view: 'landing',
     lastMainView: 'today',
     selectedSpecies: null,
-    locale,
   }
 }
 
-const createRoute = (state: AppRouteState): string => {
+const createRoute = (state: AppRouteState, locale: SupportedLocale, includeLocaleInRoute: boolean): string => {
   const params = new URLSearchParams()
-  params.set('lang', state.locale)
 
   if (state.view === 'species' && state.selectedSpecies) {
     params.set('view', 'species')
     params.set('from', state.lastMainView)
-    params.set('common', state.selectedSpecies.commonName)
     params.set('scientific', state.selectedSpecies.scientificName)
   } else {
     params.set('view', state.view)
+  }
+
+  if (includeLocaleInRoute) {
+    params.set('lang', locale)
   }
 
   const query = params.toString()
@@ -111,9 +110,10 @@ const createRoute = (state: AppRouteState): string => {
 }
 
 const App = () => {
+  const [locale, setLocaleState] = useState<SupportedLocale>(() => getLocale())
+  const [includeLocaleInRoute, setIncludeLocaleInRoute] = useState<boolean>(() => getRouteLocale() !== null)
   const [initialState] = useState<AppRouteState>(() => parseRouteState())
   const [view, setView] = useState<AppView>(initialState.view)
-  const [locale, setCurrentLocale] = useState<Locale>(initialState.locale)
   const [lastMainView, setLastMainView] = useState<'today' | 'archive' | 'rarity' | 'stats'>(
     initialState.lastMainView,
   )
@@ -123,39 +123,38 @@ const App = () => {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme)
   const [isHeaderCondensed, setIsHeaderCondensed] = useState(false)
   const [showScrollTop, setShowScrollTop] = useState(false)
-  const [activeModal, setActiveModal] = useState<ModalView | null>(null)
+  const [isAttributionOpen, setIsAttributionOpen] = useState(false)
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false)
   const [, setAttributionVersion] = useState(0)
-  const modalDialogRef = useRef<HTMLDivElement | null>(null)
-  const modalCloseRef = useRef<HTMLButtonElement | null>(null)
+  const attributionDialogRef = useRef<HTMLDivElement | null>(null)
+  const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
+  const creditsDialogRef = useRef<HTMLDivElement | null>(null)
+  const creditsCloseRef = useRef<HTMLButtonElement | null>(null)
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
-  setLocale(locale)
 
-  const navItems: NavItem[] = [
+  const allNavItems: NavItem[] = [
     { view: 'landing', label: t('nav.live') },
     { view: 'today', label: t('nav.today') },
     { view: 'archive', label: t('nav.archive') },
     { view: 'rarity', label: t('nav.highlights') },
     { view: 'stats', label: t('nav.stats') },
   ]
+  const navItems: NavItem[] = allNavItems.filter((item) => HIGHLIGHTS_ENABLED || item.view !== 'rarity')
 
-  const updateHistory = (state: AppRouteState, mode: 'push' | 'replace') => {
-    const nextUrl = createRoute(state)
+  const updateHistory = useCallback((state: AppRouteState, mode: 'push' | 'replace') => {
+    const nextUrl = createRoute(state, locale, includeLocaleInRoute)
     if (mode === 'push') {
       window.history.pushState(null, '', nextUrl)
       return
     }
 
     window.history.replaceState(null, '', nextUrl)
-  }
+  }, [includeLocaleInRoute, locale])
 
   useEffect(() => {
-    window.history.replaceState(null, '', createRoute(initialState))
-  }, [initialState])
-
-  useEffect(() => {
-    document.documentElement.lang = locale
-  }, [locale])
+    updateHistory(initialState, 'replace')
+  }, [initialState, updateHistory])
 
   useEffect(() => {
     const onAttributionUpdate = () => {
@@ -169,6 +168,15 @@ const App = () => {
   }, [])
 
   const attributionRecords = getPhotoAttributionRecords()
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+    try {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
+    } catch {
+      // no-op (storage may be unavailable in restricted contexts)
+    }
+  }, [locale])
 
   useEffect(() => {
     const root = document.documentElement
@@ -187,7 +195,6 @@ const App = () => {
       setView(next.view)
       setLastMainView(next.lastMainView)
       setSelectedSpecies(next.selectedSpecies)
-      setCurrentLocale(next.locale)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -234,7 +241,6 @@ const App = () => {
         view: nextView,
         lastMainView: nextLastMainView,
         selectedSpecies: null,
-        locale,
       },
       'push',
     )
@@ -256,7 +262,6 @@ const App = () => {
         view: 'species',
         lastMainView: sourceView,
         selectedSpecies: species,
-        locale,
       },
       'push',
     )
@@ -271,7 +276,6 @@ const App = () => {
         view: lastMainView,
         lastMainView,
         selectedSpecies: null,
-        locale,
       },
       'push',
     )
@@ -279,7 +283,7 @@ const App = () => {
   }
 
   useEffect(() => {
-    if (!activeModal) {
+    if (!isAttributionOpen && !isCreditsOpen) {
       return
     }
 
@@ -296,19 +300,19 @@ const App = () => {
       document.body.style.overflow = previousOverflow
       document.body.style.paddingRight = previousPaddingRight
     }
-  }, [activeModal])
+  }, [isAttributionOpen, isCreditsOpen])
 
   useEffect(() => {
-    if (!activeModal) {
+    if (!isAttributionOpen) {
       return
     }
 
-    modalCloseRef.current?.focus()
+    attributionCloseRef.current?.focus()
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        setActiveModal(null)
+        setIsAttributionOpen(false)
         return
       }
 
@@ -316,7 +320,7 @@ const App = () => {
         return
       }
 
-      const dialog = modalDialogRef.current
+      const dialog = attributionDialogRef.current
       if (!dialog) {
         return
       }
@@ -346,11 +350,61 @@ const App = () => {
     return () => {
       window.removeEventListener('keydown', onKeyDown)
     }
-  }, [activeModal])
+  }, [isAttributionOpen])
+
+  useEffect(() => {
+    if (!isCreditsOpen) {
+      return
+    }
+
+    creditsCloseRef.current?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setIsCreditsOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const dialog = creditsDialogRef.current
+      if (!dialog) {
+        return
+      }
+
+      const focusables = dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      )
+
+      if (focusables.length === 0) {
+        return
+      }
+
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isCreditsOpen])
 
   const activeNavigationView = view
   const openAttribution = () => {
-    setActiveModal('attribution')
+    setIsAttributionOpen(true)
   }
 
   return (
@@ -359,7 +413,7 @@ const App = () => {
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-slate-900 focus:shadow-lg"
         href="#main-content"
       >
-        Zum Inhalt springen
+        {t('common.skipToContent')}
       </a>
       <header className="sticky top-0 z-30 px-4 pt-3 sm:px-6 sm:pt-4">
         <div
@@ -384,29 +438,40 @@ const App = () => {
           </div>
           <div className="flex w-full items-stretch gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100/80 p-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 sm:w-auto sm:overflow-visible">
             <button
-              aria-label={locale === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}
-              className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              aria-label={t('common.language')}
+              className="inline-flex h-9 w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               onClick={() => {
-                const nextLocale: Locale = locale === 'de' ? 'en' : 'de'
-                setCurrentLocale(nextLocale)
-                updateHistory(
-                  {
-                    view,
-                    lastMainView,
-                    selectedSpecies,
-                    locale: nextLocale,
-                  },
-                  'replace',
-                )
+                const nextLocale: SupportedLocale = locale === 'de' ? 'en' : 'de'
+                setLocale(nextLocale)
+                setLocaleState(nextLocale)
+                setIncludeLocaleInRoute(true)
               }}
-              title={locale === 'de' ? 'English' : 'Deutsch'}
+              title={t('common.language')}
               type="button"
             >
-              {locale === 'de' ? 'EN' : 'DE'}
+              <span className="inline-flex items-center gap-1.5">
+                <svg
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M2 12h20" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                <span aria-hidden="true" className="font-mono text-[0.68rem] leading-none">
+                  {locale.toUpperCase()}
+                </span>
+              </span>
             </button>
             <button
               aria-label={theme === 'dark' ? t('theme.activateLight') : t('theme.activateDark')}
-              className="inline-flex h-9 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              className="inline-flex h-9 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[0.65rem] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               onClick={() => {
                 setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
               }}
@@ -440,15 +505,14 @@ const App = () => {
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                   )}
                 </svg>
-                <span className="hidden sm:inline">{theme === 'dark' ? t('theme.light') : t('theme.dark')}</span>
               </span>
             </button>
             {navItems.map((item) => (
               <button
-                className={`inline-flex h-9 shrink-0 items-center rounded-xl border px-4 py-2 text-[0.65rem] transition ${
+                className={`inline-flex h-9 w-[6.75rem] shrink-0 items-center justify-center rounded-xl border px-3 py-2 text-[0.65rem] transition sm:w-[6.5rem] ${
                   activeNavigationView === item.view
                     ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                    : 'border-slate-200 bg-white/70 text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'
                 }`}
                 key={item.view}
                 onClick={() => handleViewChange(item.view)}
@@ -521,7 +585,7 @@ const App = () => {
           <button
             className="font-semibold text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
             onClick={() => {
-              setActiveModal('attribution')
+              setIsAttributionOpen(true)
             }}
             type="button"
           >
@@ -531,7 +595,7 @@ const App = () => {
           <button
             className="font-semibold text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
             onClick={() => {
-              setActiveModal('credits')
+              setIsCreditsOpen(true)
             }}
             type="button"
           >
@@ -565,39 +629,36 @@ const App = () => {
         </button>
       ) : null}
 
-      {activeModal ? (
+      {isAttributionOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
-              setActiveModal(null)
+              setIsAttributionOpen(false)
             }
           }}
         >
           <div
-            aria-labelledby={activeModal === 'attribution' ? 'attribution-heading' : 'credits-heading'}
+            aria-labelledby="attribution-heading"
             aria-modal="true"
             className="max-h-[85vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
-            ref={modalDialogRef}
+            ref={attributionDialogRef}
             role="dialog"
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
-                  {activeModal === 'attribution' ? t('attribution.modalLabel') : t('credits.modalLabel')}
+                  {t('attribution.modalLabel')}
                 </p>
-                <h2
-                  className="text-lg font-semibold text-slate-900 dark:text-slate-100"
-                  id={activeModal === 'attribution' ? 'attribution-heading' : 'credits-heading'}
-                >
-                  {activeModal === 'attribution' ? t('attribution.modalHeading') : t('credits.modalHeading')}
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100" id="attribution-heading">
+                  {t('attribution.modalHeading')}
                 </h2>
               </div>
               <button
                 className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-700"
-                ref={modalCloseRef}
+                ref={attributionCloseRef}
                 onClick={() => {
-                  setActiveModal(null)
+                  setIsAttributionOpen(false)
                 }}
                 type="button"
               >
@@ -606,103 +667,138 @@ const App = () => {
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
-              {activeModal === 'attribution' ? (
-                <>
-                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-                    {t('attribution.modalDescription')}
-                  </p>
-                  {attributionRecords.length === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {t('attribution.emptyState')}
-                    </p>
-                  ) : (
-                    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                      <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm dark:divide-slate-700 dark:bg-slate-900">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                          <tr>
-                            <th className="px-3 py-3 font-semibold" scope="col">
-                              {t('attribution.columnSpecies')}
-                            </th>
-                            <th className="px-3 py-3 font-semibold" scope="col">
-                              {t('attribution.columnAuthor')}
-                            </th>
-                            <th className="px-3 py-3 font-semibold" scope="col">
-                              {t('attribution.columnLicense')}
-                            </th>
-                            <th className="px-3 py-3 font-semibold" scope="col">
-                              {t('attribution.columnSource')}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                          {attributionRecords.map((record) => (
-                            <tr
-                              className="align-top"
-                              key={`${record.commonName}|${record.scientificName}|${record.sourceUrl || 'none'}`}
-                            >
-                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                                <p className="font-semibold text-slate-800 dark:text-slate-100">{record.commonName}</p>
-                                <p className="text-slate-500 dark:text-slate-400">{record.scientificName}</p>
-                              </td>
-                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                                {record.author || record.credit || t('attribution.notSpecified')}
-                              </td>
-                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                                {record.license ? (
-                                  record.licenseUrl ? (
-                                    <a
-                                      className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
-                                      href={record.licenseUrl}
-                                      rel="noopener noreferrer"
-                                      target="_blank"
-                                    >
-                                      {record.license}
-                                    </a>
-                                  ) : (
-                                    record.license
-                                  )
-                                ) : (
-                                  t('attribution.notSpecified')
-                                )}
-                              </td>
-                              <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
-                                {record.sourceUrl ? (
-                                  <a
-                                    className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
-                                    href={record.sourceUrl}
-                                    rel="noopener noreferrer"
-                                    target="_blank"
-                                  >
-                                    {t('attribution.wikimediaSource')}
-                                  </a>
-                                ) : (
-                                  <span className="text-slate-500 dark:text-slate-400">{t('attribution.noImageLoaded')}</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </>
+              <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                {t('attribution.modalDescription')}
+              </p>
+              {attributionRecords.length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('attribution.emptyState')}
+                </p>
               ) : (
-                <div className="space-y-4 text-sm text-slate-700 dark:text-slate-300">
-                  <p>{t('credits.modalDescription')}</p>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{t('credits.backendTitle')}</p>
-                    <p className="mt-2">{t('credits.backendDescription')}</p>
-                    <a
-                      className="mt-2 inline-block font-semibold text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
-                      href="https://github.com/tphakala/birdnet-go"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      {t('credits.backendLinkLabel')}
-                    </a>
-                  </div>
+                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                  <table className="min-w-full divide-y divide-slate-200 bg-white text-left text-sm dark:divide-slate-700 dark:bg-slate-900">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      <tr>
+                        <th className="px-3 py-3 font-semibold" scope="col">
+                          {t('attribution.columnSpecies')}
+                        </th>
+                        <th className="px-3 py-3 font-semibold" scope="col">
+                          {t('attribution.columnAuthor')}
+                        </th>
+                        <th className="px-3 py-3 font-semibold" scope="col">
+                          {t('attribution.columnLicense')}
+                        </th>
+                        <th className="px-3 py-3 font-semibold" scope="col">
+                          {t('attribution.columnSource')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {attributionRecords.map((record) => (
+                        <tr
+                          className="align-top"
+                          key={`${record.commonName}|${record.scientificName}|${record.sourceUrl || 'none'}`}
+                        >
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                            <p className="font-semibold text-slate-800 dark:text-slate-100">{record.commonName}</p>
+                            <p className="text-slate-500 dark:text-slate-400">{record.scientificName}</p>
+                          </td>
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                            {record.author || record.credit || t('attribution.notSpecified')}
+                          </td>
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                            {record.license ? (
+                              record.licenseUrl ? (
+                                <a
+                                  className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                                  href={record.licenseUrl}
+                                  rel="noopener noreferrer"
+                                  target="_blank"
+                                >
+                                  {record.license}
+                                </a>
+                              ) : (
+                                record.license
+                              )
+                            ) : (
+                              t('attribution.notSpecified')
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-xs text-slate-700 dark:text-slate-300">
+                            {record.sourceUrl ? (
+                              <a
+                                className="font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                                href={record.sourceUrl}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                              >
+                                {t('attribution.wikimediaSource')}
+                              </a>
+                            ) : (
+                              <span className="text-slate-500 dark:text-slate-400">{t('attribution.noImageLoaded')}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isCreditsOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsCreditsOpen(false)
+            }
+          }}
+        >
+          <div
+            aria-labelledby="credits-heading"
+            aria-modal="true"
+            className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            ref={creditsDialogRef}
+            role="dialog"
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-400">
+                  {t('credits.modalLabel')}
+                </p>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100" id="credits-heading">
+                  {t('credits.modalHeading')}
+                </h2>
+              </div>
+              <button
+                className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+                ref={creditsCloseRef}
+                onClick={() => {
+                  setIsCreditsOpen(false)
+                }}
+                type="button"
+              >
+                {t('common.close')}
+              </button>
+            </div>
+            <div className="space-y-4 px-5 py-4 text-sm text-slate-700 dark:text-slate-300">
+              <p>{t('credits.modalDescription')}</p>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{t('credits.backendTitle')}</p>
+                <p className="mt-2">{t('credits.backendDescription')}</p>
+                <a
+                  className="mt-2 inline-block font-semibold text-slate-800 underline-offset-2 hover:underline dark:text-slate-100"
+                  href="https://github.com/tphakala/birdnet-go"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  {t('credits.backendLinkLabel')}
+                </a>
+              </div>
             </div>
           </div>
         </div>

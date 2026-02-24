@@ -1,0 +1,58 @@
+name: demo-pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: demo-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build demo
+        env:
+          VITE_DEMO_MODE: 'true'
+          VITE_BASE_PATH: '/${{ github.event.repository.name }}/'
+          VITE_SITE_NAME: 'BirdNET Dashboard Demo'
+          VITE_SITE_SUBTITLE: 'BirdNET Demo'
+          VITE_SITE_TAGLINE: 'Static demo with mock bird detections.'
+          VITE_LOCALE: 'en'
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

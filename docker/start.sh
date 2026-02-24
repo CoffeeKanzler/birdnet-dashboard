@@ -34,6 +34,13 @@ const content = `window.__BIRDNET_CONFIG__ = Object.freeze(${JSON.stringify(conf
 fs.writeFileSync(path, content, { encoding: 'utf8' })
 EOF
 
-node /app/server/server.mjs &
+# Repair bind-mounted cache permissions on boot (best effort) so cache refresh
+# can persist regardless of host-side ownership drift.
+if [ -d /cache ]; then
+  chown -R nginx:nginx /cache 2>/dev/null || true
+  chmod -R u+rwX /cache 2>/dev/null || true
+fi
+
+su-exec nginx node /app/server/server.mjs &
 
 exec /docker-entrypoint.sh nginx -g 'daemon off;'

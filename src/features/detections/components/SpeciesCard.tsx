@@ -1,4 +1,4 @@
-import { t } from '../../../i18n'
+import { getLocalizedCommonName, t } from '../../../i18n'
 import { useSpeciesPhoto } from '../useSpeciesPhoto'
 
 type SpeciesCardProps = {
@@ -21,6 +21,7 @@ const SpeciesCard = ({
   onSelect,
   onAttributionOpen,
 }: SpeciesCardProps) => {
+  const displayCommonName = getLocalizedCommonName(commonName, scientificName)
   const { photo, isLoading } = useSpeciesPhoto(commonName, scientificName)
   const width = photo?.width ?? FALLBACK_WIDTH
   const height = photo?.height ?? FALLBACK_HEIGHT
@@ -28,7 +29,7 @@ const SpeciesCard = ({
   const CardTag = isInteractive ? 'div' : 'article'
 
   const handleSelect = () => {
-    onSelect?.({ commonName, scientificName })
+    onSelect?.({ commonName: displayCommonName, scientificName })
   }
 
   const attributionTitle = photo?.attribution
@@ -64,7 +65,7 @@ const SpeciesCard = ({
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         {photo ? (
           <img
-            alt={t('attribution.photoOf', { name: commonName })}
+            alt={t('attribution.photoOf', { name: displayCommonName })}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             decoding="async"
             height={height}
@@ -118,9 +119,9 @@ const SpeciesCard = ({
         <div>
           <p
             className="text-base font-semibold leading-snug text-slate-900 break-words dark:text-slate-100"
-            title={commonName}
+            title={displayCommonName}
           >
-            {commonName}
+            {displayCommonName}
           </p>
           <p
             className="text-xs text-slate-500 break-words dark:text-slate-400"
