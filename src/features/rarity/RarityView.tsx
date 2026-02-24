@@ -159,6 +159,18 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90 sm:p-8">
         <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              {t('rarity.highlightsLabel')}
+            </p>
+            <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+              {t('rarity.highlightsHeading')}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t('rarity.highlightsDescription')}
+            </p>
+          </div>
+
           {effectiveError ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
               <span>

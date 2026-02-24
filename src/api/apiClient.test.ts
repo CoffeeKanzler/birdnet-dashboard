@@ -22,6 +22,7 @@ describe('apiClient helpers', () => {
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
     vi.useRealTimers()
+    delete window.__BIRDNET_CONFIG__
   })
 
   it('normalizes base URL and composes request URLs', () => {
@@ -43,6 +44,15 @@ describe('apiClient helpers', () => {
 
     vi.stubEnv('VITE_BIRDNET_API_BASE_URL', 'javascript:alert(1)')
     expect(getApiBaseUrl()).toBe('')
+  })
+
+  it('prefers runtime config base URL over build-time env', () => {
+    window.__BIRDNET_CONFIG__ = {
+      VITE_BIRDNET_API_BASE_URL: 'https://runtime.example.test/',
+    }
+    vi.stubEnv('VITE_BIRDNET_API_BASE_URL', 'https://build.example.test/')
+
+    expect(getApiBaseUrl()).toBe('https://runtime.example.test')
   })
 
   it('returns JSON payload when request succeeds', async () => {

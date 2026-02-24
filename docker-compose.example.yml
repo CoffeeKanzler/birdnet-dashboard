@@ -1,0 +1,31 @@
+services:
+  birdnet-go:
+    image: ghcr.io/tphakala/birdnet-go:latest
+    restart: unless-stopped
+    # Configure BirdNET-Go according to its own docs.
+    # Volumes/env omitted here intentionally.
+
+  birdnet-dashboard:
+    image: ghcr.io/your-org/birdnet-dashboard:latest
+    restart: unless-stopped
+    depends_on:
+      - birdnet-go
+    ports:
+      - "8080:80"
+    environment:
+      - BIRDNET_API_BASE_URL=http://birdnet-go:8080
+      - SUMMARY_CACHE_FILE=/cache/summary-30d.json
+      - RECENT_CACHE_FILE=/cache/recent-detections.json
+      - FAMILY_CACHE_FILE=/cache/family-matches.json
+      - HEALTHCHECK_TOKEN=change-me
+      # Runtime frontend branding/config (no rebuild required):
+      - VITE_SITE_NAME=My Bird Dashboard
+      - VITE_SITE_TAGLINE=Live detections from my station.
+      - VITE_SITE_SUBTITLE=BirdNET-Go
+      - VITE_LOCALE=en
+      - VITE_DEFAULT_THEME=system
+      # Optional: direct frontend-to-API base URL override.
+      # Keep empty to use same-origin proxy.
+      - VITE_BIRDNET_API_BASE_URL=
+    volumes:
+      - ./birdnet-dashboard-cache:/cache
