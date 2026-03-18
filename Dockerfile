@@ -25,8 +25,10 @@ ENV VITE_SITE_NAME=$VITE_SITE_NAME \
 
 RUN npm run build
 
+# checkov:skip=CKV_DOCKER_3: start.sh requires root to chown /cache and su-exec; node server runs as nginx user via su-exec
 FROM nginx:alpine
 
+# hadolint ignore=DL3018
 RUN apk add --no-cache nodejs libcap su-exec \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
 
