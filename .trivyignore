@@ -1,0 +1,6 @@
+# DS-0002: Non-root USER in Dockerfile
+# start.sh intentionally runs as root to repair bind-mounted /cache permissions and
+# to use su-exec to drop privileges. The node API server runs as the nginx user
+# (su-exec nginx node ...) and nginx worker processes also drop to the nginx user.
+# A USER instruction cannot be added without breaking the entrypoint logic.
+DS-0002
