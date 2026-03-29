@@ -28,6 +28,8 @@
   "common.retry": "Retry",
   "common.clear": "Clear",
   "common.filter": "Filter: {value}",
+  "common.minConfidence": "Min. Confidence",
+  "common.minConfidenceValue": "Min. Confidence: {value}%",
   "common.language": "Language",
   "common.skipToContent": "Skip to content",
   "common.back": "Back",
