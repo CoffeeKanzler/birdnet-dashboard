@@ -144,7 +144,7 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
   }, [notableMatches])
   const spotlightList = useMemo(() => notableList.slice(0, 10), [notableList])
   const effectiveIsLoading = (isSummaryLoading && !hasReadySummary) || isRangeLoading
-  const effectiveError = summaryError ?? rangeError
+  const effectiveError = summaryError ? rangeError : null
 
   if (effectiveIsLoading && !hasReadySummary && detections.length === 0 && !effectiveError) {
     return (

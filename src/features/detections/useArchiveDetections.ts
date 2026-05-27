@@ -44,10 +44,10 @@ export const useArchiveDetections = (
   const startTime = rangeStart.valueOf()
   const endTime = rangeEnd.valueOf()
   const validRange = !Number.isNaN(startTime) && !Number.isNaN(endTime)
-  const startDate = validRange ? rangeStart.toISOString().slice(0, 10) : ''
-  const endDate = validRange
-    ? new Date(endTime - 1).toISOString().slice(0, 10)
-    : ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const toLocalDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  const startDate = validRange ? toLocalDate(rangeStart) : ''
+  const endDate = validRange ? toLocalDate(new Date(endTime - 1)) : ''
   const mode = options.queryMode ?? 'range'
   const parallelBatchSize = Math.max(1, Math.floor(options.parallelBatchSize ?? 1))
 

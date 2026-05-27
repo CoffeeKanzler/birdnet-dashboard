@@ -94,7 +94,7 @@ describe('RarityView', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows error state and retries via refresh callback', () => {
+  it('shows error state and retries via refresh callback when both summary and range fail', () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
     mocks.useSummary30d.mockReturnValue({
       summary: null,
@@ -105,7 +105,7 @@ describe('RarityView', () => {
     mocks.useArchiveDetections.mockReturnValue({
       detections: [],
       isLoading: false,
-      error: null,
+      error: 'range failed',
       refresh,
     })
 
@@ -114,6 +114,24 @@ describe('RarityView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'common.retry' }))
     expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not show error when summary fails but range fallback succeeds', () => {
+    mocks.useSummary30d.mockReturnValue({
+      summary: null,
+      isLoading: false,
+      isPending: false,
+      error: 'summary failed',
+    })
+    mocks.useArchiveDetections.mockReturnValue({
+      detections: [],
+      isLoading: false,
+      error: null,
+      refresh: vi.fn(),
+    })
+
+    renderWithQuery(<RarityView />)
+    expect(screen.queryByText('rarity.rangeError')).not.toBeInTheDocument()
   })
 
   it('shows empty highlights state when no notable matches exist', () => {

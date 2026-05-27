@@ -66,7 +66,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
     const expectedStart = toDateInputValue(expectedStartDate)
     return startDate === expectedStart && endDate === expectedEnd
   }, [endDate, startDate, today])
-  const shouldUseSummary = isDefaultThirtyDayWindow && Boolean(summary && !summary.pending)
+  const shouldUseSummary = isDefaultThirtyDayWindow && minConfidence === 0 && Boolean(summary && !summary.pending)
 
   const { detections, isLoading, error, refresh } = useArchiveDetections(
     rangeStart,
