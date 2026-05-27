@@ -31,6 +31,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
   const [startDate, setStartDate] = useState(() => defaultStartDate)
   const [endDate, setEndDate] = useState(() => defaultEndDate)
   const [speciesFilter, setSpeciesFilter] = useState('')
+  const [minConfidence, setMinConfidence] = useState(0)
   const normalizedFilter = speciesFilter.trim().toLowerCase()
   const timezoneLabel = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -96,11 +97,18 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
   }, [startDate, endDate])
 
   const matchesFilter = useMemo(() => {
-    if (!normalizedFilter) {
-      return () => true
-    }
+    return (commonName: string, scientificName: string, confidence?: number) => {
+      if (confidence !== undefined) {
+        const confidenceValue = confidence > 1 ? confidence : confidence * 100
+        if (confidenceValue < minConfidence) {
+          return false
+        }
+      }
 
-    return (commonName: string, scientificName: string) => {
+      if (!normalizedFilter) {
+        return true
+      }
+
       const common = commonName.toLowerCase()
       const scientific = scientificName.toLowerCase()
       return (
@@ -108,7 +116,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
         scientific.includes(normalizedFilter)
       )
     }
-  }, [normalizedFilter])
+  }, [minConfidence, normalizedFilter])
 
   const archiveGroups = useMemo(() => {
     if (shouldUseSummary && summary) {
@@ -163,7 +171,7 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
       const scientificName =
         detection.scientificName?.trim() || t('common.unknownSpecies')
       const localizedCommonName = getLocalizedCommonName(commonName, scientificName)
-      if (!matchesFilter(localizedCommonName, scientificName)) {
+      if (!matchesFilter(localizedCommonName, scientificName, detection.confidence)) {
         continue
       }
 
@@ -307,15 +315,23 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
         </div>
       </header>
 
-      {normalizedFilter ? (
+      {normalizedFilter || minConfidence > 0 ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
-            {t('common.filter', { value: speciesFilter.trim() })}
-          </span>
+          {normalizedFilter ? (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+              {t('common.filter', { value: speciesFilter.trim() })}
+            </span>
+          ) : null}
+          {minConfidence > 0 ? (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+              {t('common.minConfidenceValue', { value: minConfidence })}
+            </span>
+          ) : null}
           <button
             className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             onClick={() => {
               setSpeciesFilter('')
+              setMinConfidence(0)
             }}
             type="button"
           >
@@ -355,6 +371,20 @@ const ArchiveView = ({ onSpeciesSelect, onAttributionOpen }: ArchiveViewProps) =
                 }}
                 type="date"
                 value={endDate}
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t('common.minConfidenceValue', { value: minConfidence })}
+              <input
+                className="h-9 w-full cursor-pointer accent-emerald-500"
+                max="100"
+                min="0"
+                onChange={(event) => {
+                  setMinConfidence(Number(event.target.value))
+                }}
+                step="5"
+                type="range"
+                value={minConfidence}
               />
             </label>
           </div>

@@ -69,6 +69,7 @@ const TodayView = ({
   onAttributionOpen,
 }: TodayViewProps) => {
   const [speciesFilter, setSpeciesFilter] = useState('')
+  const [minConfidence, setMinConfidence] = useState(0)
   const normalizedFilter = speciesFilter.trim().toLowerCase()
   const lastUpdatedLabel = useMemo(() => {
     if (!lastUpdated) {
@@ -82,11 +83,16 @@ const TodayView = ({
   }, [lastUpdated])
 
   const matchesFilter = useMemo(() => {
-    if (!normalizedFilter) {
-      return () => true
-    }
+    return (commonName: string, scientificName: string, confidence: number) => {
+      const confidenceValue = confidence > 1 ? confidence : confidence * 100
+      if (confidenceValue < minConfidence) {
+        return false
+      }
 
-    return (commonName: string, scientificName: string) => {
+      if (!normalizedFilter) {
+        return true
+      }
+
       const common = commonName.toLowerCase()
       const scientific = scientificName.toLowerCase()
       return (
@@ -94,13 +100,9 @@ const TodayView = ({
         scientific.includes(normalizedFilter)
       )
     }
-  }, [normalizedFilter])
+  }, [minConfidence, normalizedFilter])
 
   const filteredDetections = useMemo(() => {
-    if (!normalizedFilter) {
-      return detections
-    }
-
     return detections.filter((detection) => {
       const scientificName =
         detection.scientificName?.trim() || t('common.unknownSpecies')
@@ -108,9 +110,9 @@ const TodayView = ({
         detection.commonName?.trim() || t('common.unknownSpecies'),
         scientificName,
       )
-      return matchesFilter(commonName, scientificName)
+      return matchesFilter(commonName, scientificName, detection.confidence)
     })
-  }, [detections, matchesFilter, normalizedFilter])
+  }, [detections, matchesFilter])
 
   const todayRange = useMemo(() => {
     const start = new Date()
@@ -131,9 +133,12 @@ const TodayView = ({
         return false
       }
 
-      return parsed >= todayRange.start && parsed < todayRange.end
+      const confidenceValue = detection.confidence > 1 ? detection.confidence : detection.confidence * 100
+      const matchesConfidence = confidenceValue >= minConfidence
+
+      return parsed >= todayRange.start && parsed < todayRange.end && matchesConfidence
     })
-  }, [detections, todayRange])
+  }, [detections, minConfidence, todayRange])
 
   const todayGroups = useMemo(() => {
     if (todayDetections.length === 0) {
@@ -157,7 +162,7 @@ const TodayView = ({
         detection.commonName?.trim() || t('common.unknownSpecies'),
         scientificName,
       )
-      if (!matchesFilter(commonName, scientificName)) {
+      if (!matchesFilter(commonName, scientificName, detection.confidence)) {
         continue
       }
 
@@ -244,6 +249,20 @@ const TodayView = ({
               value={speciesFilter}
             />
           </label>
+          <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {t('common.minConfidenceValue', { value: minConfidence })}
+            <input
+              className="h-9 w-full cursor-pointer accent-emerald-500 sm:w-48"
+              max="100"
+              min="0"
+              onChange={(event) => {
+                setMinConfidence(Number(event.target.value))
+              }}
+              step="5"
+              type="range"
+              value={minConfidence}
+            />
+          </label>
           <button
             className="self-end rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
             onClick={() => {
@@ -256,15 +275,23 @@ const TodayView = ({
         </div>
       </header>
 
-      {normalizedFilter ? (
+      {normalizedFilter || minConfidence > 0 ? (
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
-            {t('common.filter', { value: speciesFilter.trim() })}
-          </span>
+          {normalizedFilter ? (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+              {t('common.filter', { value: speciesFilter.trim() })}
+            </span>
+          ) : null}
+          {minConfidence > 0 ? (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+              {t('common.minConfidenceValue', { value: minConfidence })}
+            </span>
+          ) : null}
           <button
             className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             onClick={() => {
               setSpeciesFilter('')
+              setMinConfidence(0)
             }}
             type="button"
           >

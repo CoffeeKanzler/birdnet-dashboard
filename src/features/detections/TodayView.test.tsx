@@ -86,4 +86,43 @@ describe('TodayView', () => {
       scientificName: 'Turdus merula',
     })
   })
+
+  it('filters detections by confidence', () => {
+    const detections = [
+      {
+        id: 'd1',
+        commonName: 'High Confidence Bird',
+        scientificName: 'Bird high',
+        confidence: 0.9,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: 'd2',
+        commonName: 'Low Confidence Bird',
+        scientificName: 'Bird low',
+        confidence: 0.4,
+        timestamp: new Date().toISOString(),
+      },
+    ]
+
+    render(<TodayView {...baseProps} detections={detections} />)
+
+    // Both should be visible initially (minConfidence 0)
+    // Note: they appear twice (once in groups, once in list)
+    expect(screen.getAllByText('High Confidence Bird').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Low Confidence Bird').length).toBeGreaterThan(0)
+
+    // Find the range input (slider)
+    const slider = screen.getByRole('slider')
+    fireEvent.change(slider, { target: { value: '50' } })
+
+    // Only high confidence bird should remain
+    expect(screen.getAllByText('High Confidence Bird').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Low Confidence Bird')).not.toBeInTheDocument()
+
+    // Reset filter
+    fireEvent.click(screen.getByRole('button', { name: 'common.clear' }))
+    expect(screen.getAllByText('High Confidence Bird').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Low Confidence Bird').length).toBeGreaterThan(0)
+  })
 })
