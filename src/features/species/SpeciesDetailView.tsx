@@ -10,7 +10,7 @@ import { queryKeys } from '../../api/queryKeys'
 import { siteConfig } from '../../config/site'
 import { notableSpecies } from '../../data/notableSpecies'
 import { speciesDescriptions } from '../../data/speciesDescriptions'
-import { getLocalizedCommonName, getSpeciesData, t } from '../../i18n'
+import { getLocale, getLocalizedCommonName, getSpeciesData, t } from '../../i18n'
 import { toUserErrorMessage } from '../../utils/errorMessages'
 import { useSpeciesPhoto } from '../detections/useSpeciesPhoto'
 import { useSpeciesDetections } from './useSpeciesDetections'
@@ -154,7 +154,7 @@ const SpeciesDetailView = ({
 
       const sortedMatches = matches
         .slice()
-        .sort((a, b) => a.commonName.localeCompare(b.commonName, 'de'))
+        .sort((a, b) => a.commonName.localeCompare(b.commonName, getLocale()))
 
       queryClient.setQueryData(queryKeys.familyMatches(familyKey), sortedMatches)
       setFamilyMatches(sortedMatches)
