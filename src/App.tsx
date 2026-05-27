@@ -130,6 +130,8 @@ const App = () => {
   const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
   const creditsDialogRef = useRef<HTMLDivElement | null>(null)
   const creditsCloseRef = useRef<HTMLButtonElement | null>(null)
+  const routeStateRef = useRef<AppRouteState>({ view, lastMainView, selectedSpecies })
+  routeStateRef.current = { view, lastMainView, selectedSpecies }
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
 
@@ -153,8 +155,8 @@ const App = () => {
   }, [includeLocaleInRoute, locale])
 
   useEffect(() => {
-    updateHistory(initialState, 'replace')
-  }, [initialState, updateHistory])
+    updateHistory(routeStateRef.current, 'replace')
+  }, [updateHistory])
 
   useEffect(() => {
     const onAttributionUpdate = () => {
