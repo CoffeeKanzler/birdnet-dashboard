@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { getPhotoAttributionRecords } from './api/birdImages'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -125,7 +125,7 @@ const App = () => {
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [isAttributionOpen, setIsAttributionOpen] = useState(false)
   const [isCreditsOpen, setIsCreditsOpen] = useState(false)
-  const [, setAttributionVersion] = useState(0)
+  const [attributionVersion, setAttributionVersion] = useState(0)
   const attributionDialogRef = useRef<HTMLDivElement | null>(null)
   const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
   const creditsDialogRef = useRef<HTMLDivElement | null>(null)
@@ -167,7 +167,10 @@ const App = () => {
     }
   }, [])
 
-  const attributionRecords = getPhotoAttributionRecords()
+  const attributionRecords = useMemo(
+    () => (void attributionVersion, getPhotoAttributionRecords()),
+    [attributionVersion],
+  )
 
   useEffect(() => {
     document.documentElement.lang = locale
@@ -507,20 +510,23 @@ const App = () => {
                 </svg>
               </span>
             </button>
-            {navItems.map((item) => (
-              <button
-                className={`inline-flex h-9 w-[6.75rem] shrink-0 items-center justify-center rounded-xl border px-3 py-2 text-[0.65rem] transition sm:w-[6.5rem] ${
-                  activeNavigationView === item.view
-                    ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
-                    : 'border-slate-200 bg-white/70 text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'
-                }`}
-                key={item.view}
-                onClick={() => handleViewChange(item.view)}
-                type="button"
-              >
-                {item.label}
-              </button>
-            ))}
+            <nav aria-label={t('nav.label')}>
+              {navItems.map((item) => (
+                <button
+                  aria-current={activeNavigationView === item.view ? 'page' : undefined}
+                  className={`inline-flex h-9 w-[6.75rem] shrink-0 items-center justify-center rounded-xl border px-3 py-2 text-[0.65rem] transition sm:w-[6.5rem] ${
+                    activeNavigationView === item.view
+                      ? 'border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                      : 'border-slate-200 bg-white/70 text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:hover:text-slate-300'
+                  }`}
+                  key={item.view}
+                  onClick={() => handleViewChange(item.view)}
+                  type="button"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
           </div>
         </div>
       </header>

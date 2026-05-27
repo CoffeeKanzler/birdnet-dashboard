@@ -120,15 +120,20 @@ export const fetchSummary30d = async (signal?: AbortSignal): Promise<Summary30d>
     }
   }
 
-  const response = await fetch(buildApiUrl('/api/v2/summary/30d'), {
+  let isPending = false
+  const raw = await requestJson<RawSummaryResponse>(buildApiUrl('/api/v2/summary/30d'), {
     signal,
-    cache: 'no-store',
-    headers: {
-      accept: 'application/json',
+    onResponse: (resp) => {
+      isPending = resp.status === 202
     },
+  }).catch((err: unknown) => {
+    if (isPending) {
+      return {} as RawSummaryResponse
+    }
+    throw err
   })
 
-  if (response.status === 202) {
+  if (isPending) {
     const nowIso = new Date().toISOString()
     return {
       generatedAt: nowIso,
@@ -147,12 +152,6 @@ export const fetchSummary30d = async (signal?: AbortSignal): Promise<Summary30d>
       },
     }
   }
-
-  if (!response.ok) {
-    throw new Error(`Summary request failed with status ${response.status}`)
-  }
-
-  const raw = (await response.json()) as RawSummaryResponse
 
   const nowIso = new Date().toISOString()
   const stats = raw.stats ?? {}
