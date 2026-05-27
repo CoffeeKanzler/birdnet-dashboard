@@ -231,7 +231,9 @@ const SpeciesDetailView = ({
             {t('species.sectionLabel')}
           </p>
           <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{displayCommonName}</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{scientificName}</p>
+          {displayCommonName !== scientificName ? (
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{scientificName}</p>
+          ) : null}
         </div>
         <button
           className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"

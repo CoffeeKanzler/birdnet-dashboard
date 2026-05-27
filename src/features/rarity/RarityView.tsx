@@ -210,7 +210,7 @@ const RarityView = ({ onSpeciesSelect, onAttributionOpen }: RarityViewProps) => 
                     spotlightEntry.species.scientificName ?? 'unknown'
                   }`
                   const lastSeenLabel = spotlightEntry.lastSeenAt
-                    ? spotlightEntry.lastSeenAt.toLocaleDateString(siteConfig.dateLocale)
+                    ? new Intl.DateTimeFormat(siteConfig.dateLocale).format(spotlightEntry.lastSeenAt)
                     : t('common.unknown')
 
                   return (
