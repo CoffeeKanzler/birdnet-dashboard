@@ -76,8 +76,16 @@ export function getLocale(): SupportedLocale {
 
 export function t(key: TranslationKey, params?: Record<string, string | number>): string {
   const translations = locales[currentLocale] || locales['de']
-  let value = translations[key] || locales['de'][key] || key
+  const raw = translations[key] ?? locales['de'][key]
 
+  if (!raw) {
+    if (import.meta.env.DEV) {
+      console.warn(`[i18n] missing key: "${key}"`)
+    }
+    return key
+  }
+
+  let value = raw
   if (params) {
     for (const [paramKey, paramValue] of Object.entries(params)) {
       value = value.split(`{${paramKey}}`).join(String(paramValue))
