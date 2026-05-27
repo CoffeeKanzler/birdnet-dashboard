@@ -29,7 +29,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
-    "@vitejs/plugin-react": "^5.1.4",
+    "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^10.0.2",
     "eslint-plugin-react-hooks": "7.1.1",
@@ -37,10 +37,7 @@
     "globals": "^17.0.0",
     "jsdom": "^28.1.0",
     "typescript": "^5.2.2",
-    "vite": "^7.3.1",
+    "vite": "^8.0.14",
     "vitest": "^4.0.18"
-  },
-  "overrides": {
-    "minimatch": "^10.2.2"
   }
 }
