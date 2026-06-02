@@ -27,7 +27,8 @@ RUN npm run build
 
 FROM nginx:alpine
 
-RUN apk add --no-cache nodejs libcap su-exec \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache nodejs libcap su-exec \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
 
 WORKDIR /app
