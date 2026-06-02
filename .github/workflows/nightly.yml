@@ -1,0 +1,273 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-coverage:
+    name: test-coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Write coverage summary
+        if: always()
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = 'coverage/coverage-summary.json';
+          if (!fs.existsSync(path)) { console.log('No coverage data'); process.exit(0); }
+          const { total: t } = JSON.parse(fs.readFileSync(path));
+          const pct = (v) => v.pct.toFixed(1) + '%';
+          const icon = (v, thr) => v.pct >= thr ? ':white_check_mark:' : ':x:';
+          const lines = [
+            '## Test Coverage',
+            '',
+            '| Metric | Coverage | Threshold | Status |',
+            '|--------|----------|-----------|--------|',
+            \`| Statements | \${pct(t.statements)} | 95% | \${icon(t.statements, 95)} |\`,
+            \`| Lines      | \${pct(t.lines)}      | 95% | \${icon(t.lines, 95)} |\`,
+            \`| Functions  | \${pct(t.functions)}  | 95% | \${icon(t.functions, 95)} |\`,
+            \`| Branches   | \${pct(t.branches)}   | 75% | \${icon(t.branches, 75)} |\`,
+            '',
+            \`> **Covered:** \${t.statements.covered}/\${t.statements.total} statements, \${t.lines.covered}/\${t.lines.total} lines\`,
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          "
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-coverage
+          path: coverage
+          retention-days: 7
+
+  bundle-analysis:
+    name: bundle-analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Analyze bundle sizes
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+
+          function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+          }
+
+          function walkDir(dir) {
+            const files = [];
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) files.push(...walkDir(full));
+              else files.push({ path: full.replace('dist/', ''), size: fs.statSync(full).size });
+            }
+            return files;
+          }
+
+          const files = walkDir('dist')
+            .filter(f => /\.(js|css|html)$/.test(f.path))
+            .sort((a, b) => b.size - a.size);
+
+          const total = files.reduce((s, f) => s + f.size, 0);
+          const jsTotal = files.filter(f => f.path.endsWith('.js')).reduce((s, f) => s + f.size, 0);
+          const cssTotal = files.filter(f => f.path.endsWith('.css')).reduce((s, f) => s + f.size, 0);
+
+          const rows = files.map(f => \`| \${f.path} | \${formatBytes(f.size)} |\`).join('\n');
+
+          const lines = [
+            '## Bundle Analysis',
+            '',
+            \`| Total | JS | CSS |\`,
+            \`|-------|----|----- |\`,
+            \`| \${formatBytes(total)} | \${formatBytes(jsTotal)} | \${formatBytes(cssTotal)} |\`,
+            '',
+            '| File | Size |',
+            '|------|------|',
+            rows,
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          "
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-dist
+          path: dist
+          retention-days: 3
+
+  e2e-full:
+    name: e2e-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full E2E suite
+        run: npx playwright test --project=chromium
+        continue-on-error: true
+        id: e2e
+
+      - name: Write E2E summary
+        if: always()
+        run: |
+          RESULT="${{ steps.e2e.outcome }}"
+          if [ "$RESULT" = "success" ]; then
+            ICON=":white_check_mark:"
+            STATUS="All passed"
+          else
+            ICON=":x:"
+            STATUS="Some failed — check test-results artifact"
+          fi
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          ## E2E Tests (full suite)
+
+          | Suite | Status |
+          |-------|--------|
+          | Chromium | $ICON $STATUS |
+
+          > Spec files: archive-rarity, cache, error-recovery, full-navigation, landing, language-selection, navigation, smoke, species-detail, today-filter
+          EOF
+
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-e2e-results
+          path: test-results
+          retention-days: 7
+
+  dependency-health:
+    name: dependency-health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check outdated packages
+        id: outdated
+        run: |
+          npm outdated --json > outdated.json 2>/dev/null || true
+          echo "count=$(node -e "const d=require('./outdated.json'); console.log(Object.keys(d).length)")" >> "$GITHUB_OUTPUT"
+
+      - name: Write dependency summary
+        run: |
+          node -e "
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('outdated.json') || '{}');
+          const pkgs = Object.entries(data);
+
+          let lines = ['## Dependency Health'];
+
+          if (pkgs.length === 0) {
+            lines.push('', ':white_check_mark: All dependencies are up to date.');
+          } else {
+            lines.push(
+              '',
+              \`> **\${pkgs.length} outdated package\${pkgs.length === 1 ? '' : 's'}** (Renovate will handle these automatically)\`,
+              '',
+              '| Package | Current | Wanted | Latest | Type |',
+              '|---------|---------|--------|--------|------|',
+              ...pkgs.map(([name, info]) =>
+                \`| \${name} | \${info.current ?? '—'} | \${info.wanted ?? '—'} | \${info.latest ?? '—'} | \${info.type ?? 'dep'} |\`
+              )
+            );
+          }
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          "
+
+      - name: Run npm audit (structured)
+        run: |
+          npm audit --json > audit.json 2>/dev/null || true
+          node -e "
+          const fs = require('fs');
+          const raw = fs.readFileSync('audit.json', 'utf8');
+          let audit;
+          try { audit = JSON.parse(raw); } catch { process.exit(0); }
+
+          const meta = audit.metadata || {};
+          const vulns = meta.vulnerabilities || {};
+          const total = vulns.total ?? Object.values(vulns).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
+          const critical = vulns.critical ?? 0;
+          const high = vulns.high ?? 0;
+
+          const icon = (critical + high) > 0 ? ':x:' : ':white_check_mark:';
+          const lines = [
+            '## npm Audit',
+            '',
+            '| Severity | Count |',
+            '|----------|-------|',
+            \`| Critical | \${critical} |\`,
+            \`| High     | \${high} |\`,
+            \`| Moderate | \${vulns.moderate ?? 0} |\`,
+            \`| Low      | \${vulns.low ?? 0} |\`,
+            \`| **Total**    | **\${total}** \${icon} |\`,
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          "
