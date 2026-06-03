@@ -14,7 +14,7 @@ export default defineConfig({
     mockReset: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
       include: [
         'src/App.tsx',
         'src/api/apiClient.ts',
