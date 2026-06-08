@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Renovate
         if: steps.token_check.outputs.has_token == 'true'
-        uses: renovatebot/github-action@v46.1.14
+        uses: renovatebot/github-action@v46.1.15
         env:
           RENOVATE_REPOSITORIES: CoffeeKanzler/birdnet-dashboard
         with:
