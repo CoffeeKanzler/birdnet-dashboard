@@ -512,7 +512,7 @@ const App = () => {
                 </svg>
               </span>
             </button>
-            <nav aria-label={t('nav.label')}>
+            <nav aria-label={t('nav.label')} className="flex items-stretch gap-2">
               {navItems.map((item) => (
                 <button
                   aria-current={activeNavigationView === item.view ? 'page' : undefined}
