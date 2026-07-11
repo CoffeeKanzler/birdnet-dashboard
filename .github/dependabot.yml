@@ -9,6 +9,12 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    ignore:
+      # @typescript-eslint (through at least 8.63.1-alpha, its canary) only
+      # supports typescript <6.1.0, so a TS major bump breaks `npm ci` via
+      # ERESOLVE. Remove once @typescript-eslint publishes TS 7 support.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
