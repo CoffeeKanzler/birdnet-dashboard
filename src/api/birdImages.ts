@@ -176,6 +176,23 @@ const normalizeName = (value?: string): string => {
 const buildCacheKey = (commonName: string, scientificName: string): string =>
   `${commonName}|${scientificName}`
 
+// Wikipedia/Commons metadata (description URLs, license URLs) is wiki-editable
+// content, not a trusted first-party value. It ends up in an <a href> in the
+// UI, so reject anything that isn't a plain http(s) link (e.g. a javascript:
+// URI) before it ever reaches the DOM.
+const toSafeHttpUrl = (value?: string): string | undefined => {
+  if (!value) {
+    return undefined
+  }
+
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
 const toCommonsFileTitleFromThumbnailUrl = (thumbnailUrl: string): string | null => {
   try {
     const parsed = new URL(thumbnailUrl)
@@ -287,11 +304,11 @@ const resolveAttribution = async (
     }
 
     return {
-      sourceUrl: info.descriptionurl ?? fallbackSourceUrl,
+      sourceUrl: toSafeHttpUrl(info.descriptionurl) ?? fallbackSourceUrl,
       author: stripHtml(info.extmetadata?.Artist?.value),
       credit: stripHtml(info.extmetadata?.Credit?.value),
       license: stripHtml(info.extmetadata?.LicenseShortName?.value),
-      licenseUrl: info.extmetadata?.LicenseUrl?.value,
+      licenseUrl: toSafeHttpUrl(info.extmetadata?.LicenseUrl?.value),
       usageTerms: stripHtml(info.extmetadata?.UsageTerms?.value),
     }
   }
@@ -346,8 +363,8 @@ const fetchSummaryThumbnail = async (
     }
 
     const sourceUrl =
-      data.content_urls?.desktop?.page ??
-      data.content_urls?.mobile?.page ??
+      toSafeHttpUrl(data.content_urls?.desktop?.page) ??
+      toSafeHttpUrl(data.content_urls?.mobile?.page) ??
       ''
 
     const imageTitleFromPage = await resolveImageTitle(

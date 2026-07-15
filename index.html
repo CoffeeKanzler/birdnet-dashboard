@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/bird-favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      HTTP-header CSP (see docker/nginx.conf) is the primary defense for
+      self-hosted deployments. This meta-tag copy covers hosts that can't set
+      custom response headers, like the GitHub Pages demo — frame-ancestors
+      and other header-only directives are dropped since browsers ignore them
+      here, but script-src/connect-src/img-src still provide real protection.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; img-src 'self' data: https://upload.wikimedia.org https://commons.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://en.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'"
+    />
     <title>BirdNET Dashboard</title>
   </head>
   <body>

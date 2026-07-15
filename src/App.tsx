@@ -130,7 +130,15 @@ const App = () => {
   const attributionCloseRef = useRef<HTMLButtonElement | null>(null)
   const creditsDialogRef = useRef<HTMLDivElement | null>(null)
   const creditsCloseRef = useRef<HTMLButtonElement | null>(null)
+  const mainContentRef = useRef<HTMLElement | null>(null)
   const routeStateRef = useRef<AppRouteState>({ view, lastMainView, selectedSpecies })
+
+  // Moves focus (not just scroll) to the main content on navigation, so
+  // screen-reader users get an announcement that the view changed — sighted
+  // users already get that cue from the scroll-to-top below.
+  const focusMainContent = () => {
+    mainContentRef.current?.focus({ preventScroll: true })
+  }
   routeStateRef.current = { view, lastMainView, selectedSpecies }
 
   useBackgroundCacheWarmer(view === 'landing' || view === 'today')
@@ -250,6 +258,7 @@ const App = () => {
       'push',
     )
     window.scrollTo({ top: 0 })
+    focusMainContent()
   }
 
   const handleSpeciesSelect = (species: SelectedSpecies) => {
@@ -271,6 +280,7 @@ const App = () => {
       'push',
     )
     window.scrollTo({ top: 0 })
+    focusMainContent()
   }
 
   const handleSpeciesBack = () => {
@@ -285,6 +295,7 @@ const App = () => {
       'push',
     )
     window.scrollTo({ top: 0 })
+    focusMainContent()
   }
 
   useEffect(() => {
@@ -555,6 +566,8 @@ const App = () => {
       <main
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-5 sm:gap-10 sm:px-6 sm:py-10"
         id="main-content"
+        ref={mainContentRef}
+        tabIndex={-1}
       >
         {view === 'landing' ? (
           <LandingView
