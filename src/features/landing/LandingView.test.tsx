@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderWithQuery } from '../../test/renderWithQuery'
@@ -109,5 +109,122 @@ describe('LandingView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '©' }))
     expect(onAttributionOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('supports keyboard activation of a live highlight card', () => {
+    const onSpeciesSelect = vi.fn()
+
+    mocks.useDetections.mockReturnValue({
+      detections: [
+        {
+          id: 'd1',
+          commonName: 'Amsel',
+          scientificName: 'Turdus merula',
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      isLoading: false,
+      error: null,
+      cacheMode: 'live',
+    })
+
+    renderWithQuery(<LandingView onSpeciesSelect={onSpeciesSelect} />)
+
+    const card = screen.getByRole('button', { name: /Amsel/ })
+    fireEvent.keyDown(card, { key: 'Enter' })
+    expect(onSpeciesSelect).toHaveBeenCalledTimes(1)
+
+    fireEvent.keyDown(card, { key: ' ' })
+    expect(onSpeciesSelect).toHaveBeenCalledTimes(2)
+
+    fireEvent.keyDown(card, { key: 'a' })
+    expect(onSpeciesSelect).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows "unknown" status for an unparsable timestamp, and age-based labels otherwise', () => {
+    mocks.useDetections.mockReturnValue({
+      detections: [
+        {
+          id: 'd1',
+          commonName: 'Garbage Timestamp Bird',
+          scientificName: 'Bird garbage',
+          timestamp: 'garbage',
+        },
+        {
+          id: 'd2',
+          commonName: 'Just Now Bird',
+          scientificName: 'Bird now',
+          timestamp: new Date(Date.now() - 5 * 60_000).toISOString(),
+        },
+        {
+          id: 'd3',
+          commonName: 'Half Hour Bird',
+          scientificName: 'Bird half hour',
+          timestamp: new Date(Date.now() - 30 * 60_000).toISOString(),
+        },
+      ],
+      isLoading: false,
+      error: null,
+      cacheMode: 'live',
+    })
+
+    renderWithQuery(<LandingView />)
+
+    expect(screen.getByText('common.unknown')).toBeInTheDocument()
+    expect(screen.getByText('live.statusLive')).toBeInTheDocument()
+    expect(screen.getByText('live.statusMinutesAgo')).toBeInTheDocument()
+  })
+
+  it('deduplicates repeated species and caps the list at maxItems', () => {
+    mocks.useDetections.mockReturnValue({
+      detections: [
+        { id: 'd1', commonName: 'Amsel', scientificName: 'Turdus merula', timestamp: new Date().toISOString() },
+        { id: 'd2', commonName: 'Amsel', scientificName: 'Turdus merula', timestamp: new Date().toISOString() },
+        { id: 'd3', commonName: 'Star', scientificName: 'Sturnus vulgaris', timestamp: new Date().toISOString() },
+        { id: 'd4', commonName: 'Zilpzalp', scientificName: 'Phylloscopus collybita', timestamp: new Date().toISOString() },
+        { id: 'd5', commonName: 'Kohlmeise', scientificName: 'Parus major', timestamp: new Date().toISOString() },
+      ],
+      isLoading: false,
+      error: null,
+      cacheMode: 'live',
+    })
+
+    renderWithQuery(<LandingView />)
+
+    // jsdom's matchMedia stub always reports no match, so maxItems defaults to 3.
+    expect(screen.getByText('Amsel')).toBeInTheDocument()
+    expect(screen.getByText('Star')).toBeInTheDocument()
+    expect(screen.getByText('Zilpzalp')).toBeInTheDocument()
+    expect(screen.queryByText('Kohlmeise')).not.toBeInTheDocument()
+  })
+
+  it('reacts to matchMedia change events for responsive item counts', () => {
+    const listeners: Record<string, (event: { matches: boolean }) => void> = {}
+    const originalMatchMedia = window.matchMedia
+
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: (_event: string, handler: (event: { matches: boolean }) => void) => {
+        listeners[query] = handler
+      },
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia
+
+    try {
+      renderWithQuery(<LandingView />)
+
+      expect(() => {
+        act(() => {
+          listeners['(min-width: 640px)']?.({ matches: true } as MediaQueryListEvent)
+        })
+      }).not.toThrow()
+    } finally {
+      window.matchMedia = originalMatchMedia
+    }
   })
 })

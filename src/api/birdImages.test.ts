@@ -157,4 +157,133 @@ describe('birdImages', () => {
     expect(third).toBeNull()
     expect(requestJsonMock.mock.calls.length).toBeGreaterThan(callCountAfterFirst)
   })
+
+  it('returns null immediately when the signal is already aborted', async () => {
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+    const controller = new AbortController()
+    controller.abort()
+
+    const result = await fetchSpeciesPhoto({
+      scientificName: 'Aborted Species',
+      signal: controller.signal,
+    })
+
+    expect(result).toBeNull()
+    expect(requestJsonMock).not.toHaveBeenCalled()
+  })
+
+  it('returns null without fetching when both names are placeholders or empty', async () => {
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+
+    const empty = await fetchSpeciesPhoto({})
+    expect(empty).toBeNull()
+
+    const placeholder = await fetchSpeciesPhoto({
+      commonName: 'Unknown species',
+      scientificName: 'unbekannte art',
+    })
+    expect(placeholder).toBeNull()
+    expect(requestJsonMock).not.toHaveBeenCalled()
+  })
+
+  it('reuses the in-flight request for a second concurrent call with the same cache key', async () => {
+    requestJsonMock.mockResolvedValue({
+      thumbnail: { source: 'https://upload.wikimedia.org/concurrent.jpg', width: 200, height: 150 },
+    })
+
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+
+    const first = fetchSpeciesPhoto({ scientificName: 'Concurrent Species' })
+    const second = fetchSpeciesPhoto({ scientificName: 'Concurrent Species' })
+
+    const [firstResult, secondResult] = await Promise.all([first, second])
+
+    expect(firstResult).toEqual(secondResult)
+    expect(firstResult?.url).toBe('https://upload.wikimedia.org/concurrent.jpg')
+  })
+
+  it('rejects with a formatted error for a non-404 Wikipedia HTTP failure', async () => {
+    requestJsonMock.mockImplementation(async (url: string) => {
+      if (url.includes('/page/summary/')) {
+        throw new MockApiClientError({ message: 'server error', code: 'http', status: 500 })
+      }
+      return {}
+    })
+
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+
+    await expect(
+      fetchSpeciesPhoto({ scientificName: 'Broken Species' }),
+    ).rejects.toThrow('Wikipedia-Anfrage fehlgeschlagen: 500')
+  })
+
+  it('rejects with a generic error for a non-ApiClientError failure', async () => {
+    requestJsonMock.mockImplementation(async (url: string) => {
+      if (url.includes('/page/summary/')) {
+        throw new TypeError('network exploded')
+      }
+      return {}
+    })
+
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+
+    await expect(
+      fetchSpeciesPhoto({ scientificName: 'Explode Species' }),
+    ).rejects.toThrow('Wikipedia-Anfrage fehlgeschlagen')
+  })
+
+  it('falls back to no attribution when the page-image lookup finds no image', async () => {
+    requestJsonMock.mockImplementation(async (url: string) => {
+      if (url.includes('/page/summary/')) {
+        return {
+          thumbnail: { source: 'https://upload.wikimedia.org/no-title.jpg', width: 200, height: 150 },
+        }
+      }
+      if (url.includes('/w/api.php') && url.includes('piprop=name')) {
+        return { query: { pages: { '1': {} } } }
+      }
+      return {}
+    })
+
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+    const photo = await fetchSpeciesPhoto({ scientificName: 'Titleless Species' })
+
+    expect(photo?.url).toBe('https://upload.wikimedia.org/no-title.jpg')
+    expect(photo?.sourceUrl).toBe('')
+  })
+
+  it('falls back to the source URL when the commons imageinfo lookup finds no info', async () => {
+    requestJsonMock.mockImplementation(async (url: string) => {
+      if (url.includes('/page/summary/')) {
+        return {
+          thumbnail: { source: 'https://upload.wikimedia.org/no-info.jpg', width: 200, height: 150 },
+          content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Example' } },
+        }
+      }
+      if (url.includes('piprop=name')) {
+        return { query: { pages: { '1': { pageimage: 'Example.jpg' } } } }
+      }
+      if (url.includes('iiprop=url')) {
+        return { query: { pages: { '1': { imageinfo: [] } } } }
+      }
+      return {}
+    })
+
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+    const photo = await fetchSpeciesPhoto({ scientificName: 'Infoless Species' })
+
+    expect(photo?.sourceUrl).toBe('https://en.wikipedia.org/wiki/Example')
+  })
+
+  it('sorts attribution records by common name, then scientific name', async () => {
+    requestJsonMock.mockResolvedValue({})
+
+    const { fetchSpeciesPhoto, getPhotoAttributionRecords } = await import('./birdImages')
+
+    await fetchSpeciesPhoto({ commonName: 'Zebra Finch', scientificName: 'Taeniopygia guttata' })
+    await fetchSpeciesPhoto({ commonName: 'Amsel', scientificName: 'Turdus merula' })
+
+    const records = getPhotoAttributionRecords()
+    expect(records.map((r) => r.commonName)).toEqual(['Amsel', 'Zebra Finch'])
+  })
 })

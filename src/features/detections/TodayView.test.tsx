@@ -125,4 +125,96 @@ describe('TodayView', () => {
     expect(screen.getAllByText('High Confidence Bird').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Low Confidence Bird').length).toBeGreaterThan(0)
   })
+
+  it('shows the formatted last-updated timestamp when available', () => {
+    render(<TodayView {...baseProps} lastUpdated={new Date('2026-03-14T12:00:00.000Z')} />)
+    expect(screen.getByText(/today.lastUpdated/)).toBeInTheDocument()
+  })
+
+  it('renders confidence tiers and handles missing or invalid timestamps in the list', () => {
+    const detections = [
+      {
+        id: 'd1',
+        commonName: 'Medium Confidence Bird',
+        scientificName: 'Bird medium',
+        confidence: 0.6,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: 'd2',
+        commonName: 'NaN Confidence Bird',
+        scientificName: 'Bird nan',
+        confidence: Number.NaN,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: 'd3',
+        commonName: 'No Timestamp Bird',
+        scientificName: 'Bird none',
+        confidence: 0.7,
+        timestamp: '',
+      },
+      {
+        id: 'd4',
+        commonName: 'Garbage Timestamp Bird',
+        scientificName: 'Bird garbage',
+        confidence: 0.7,
+        timestamp: 'garbage',
+      },
+    ]
+
+    render(<TodayView {...baseProps} detections={detections} />)
+
+    expect(screen.getByText('0 %')).toBeInTheDocument()
+    expect(screen.getByText('common.unknownTime')).toBeInTheDocument()
+    expect(screen.getByText('garbage')).toBeInTheDocument()
+  })
+
+  it('filters today\'s grouped species by name, merging repeats and breaking count ties', () => {
+    const today = new Date()
+
+    const detections = [
+      {
+        id: 'a1',
+        commonName: 'Amsel',
+        scientificName: 'Turdus merula',
+        confidence: 0.9,
+        timestamp: today.toISOString(),
+      },
+      {
+        id: 'a2',
+        commonName: 'Amsel',
+        scientificName: 'Turdus merula',
+        confidence: 0.85,
+        timestamp: today.toISOString(),
+      },
+      {
+        id: 'b1',
+        commonName: 'Star',
+        scientificName: 'Sturnus vulgaris',
+        confidence: 0.9,
+        timestamp: today.toISOString(),
+      },
+      {
+        id: 'c1',
+        commonName: 'Zilpzalp',
+        scientificName: 'Phylloscopus collybita',
+        confidence: 0.9,
+        timestamp: today.toISOString(),
+      },
+    ]
+
+    render(<TodayView {...baseProps} detections={detections} />)
+
+    expect(screen.getByRole('button', { name: 'Amsel' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Star' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Zilpzalp' })).toBeInTheDocument()
+
+    const filterInput = screen.getByPlaceholderText('today.filterPlaceholder')
+    fireEvent.change(filterInput, { target: { value: 'amsel' } })
+
+    expect(screen.getByRole('button', { name: 'Amsel' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Star' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Zilpzalp' })).not.toBeInTheDocument()
+  })
 })
