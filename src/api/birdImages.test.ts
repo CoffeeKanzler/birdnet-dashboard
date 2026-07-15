@@ -275,6 +275,43 @@ describe('birdImages', () => {
     expect(photo?.sourceUrl).toBe('https://en.wikipedia.org/wiki/Example')
   })
 
+  it('drops unsafe (non-http/https) URLs from Wikipedia/Commons metadata instead of exposing them as link hrefs', async () => {
+    requestJsonMock.mockImplementation(async (url: string) => {
+      if (url.startsWith('https://de.wikipedia.org/api/rest_v1/page/summary/')) {
+        return {
+          thumbnail: { source: 'https://upload.wikimedia.org/unsafe-test.jpg', width: 400, height: 300 },
+          content_urls: { desktop: { page: 'javascript:alert(1)' } },
+        }
+      }
+      if (url.includes('piprop=name')) {
+        return { query: { pages: { '1': { pageimage: 'Unsafe.jpg' } } } }
+      }
+      if (url.includes('iiprop=url')) {
+        return {
+          query: {
+            pages: {
+              '1': {
+                imageinfo: [
+                  {
+                    descriptionurl: 'javascript:alert(document.cookie)',
+                    extmetadata: { LicenseUrl: { value: 'data:text/html,<script>alert(1)</script>' } },
+                  },
+                ],
+              },
+            },
+          },
+        }
+      }
+      return {}
+    })
+
+    const { fetchSpeciesPhoto } = await import('./birdImages')
+    const photo = await fetchSpeciesPhoto({ scientificName: 'Unsafe species' })
+
+    expect(photo?.sourceUrl).toBe('')
+    expect(photo?.attribution?.licenseUrl).toBeUndefined()
+  })
+
   it('sorts attribution records by common name, then scientific name', async () => {
     requestJsonMock.mockResolvedValue({})
 

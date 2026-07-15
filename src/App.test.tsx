@@ -177,6 +177,16 @@ describe('App navigation and URL state', () => {
     expect(window.location.search).toBe('?view=landing')
   })
 
+  it('moves focus to the main content region on navigation, for screen-reader users', () => {
+    renderWithQuery(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archiv' }))
+    expect(document.activeElement).toBe(document.getElementById('main-content'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select Robin' }))
+    expect(document.activeElement).toBe(document.getElementById('main-content'))
+  })
+
   it('navigates to stats view via deep link and supports back navigation from species', () => {
     window.history.replaceState(null, '', '/?view=stats')
 
