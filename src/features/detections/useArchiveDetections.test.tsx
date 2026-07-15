@@ -142,4 +142,238 @@ describe('useArchiveDetections', () => {
       }),
     )
   })
+
+  const makeDetections = (
+    count: number,
+    opts: { idPrefix: string; timestamp: string | ((index: number) => string) },
+  ) =>
+    Array.from({ length: count }, (_, index) => ({
+      id: `${opts.idPrefix}-${index}`,
+      commonName: `Species ${opts.idPrefix}-${index}`,
+      scientificName: `Sci ${opts.idPrefix}-${index}`,
+      confidence: 0.8,
+      timestamp: typeof opts.timestamp === 'function' ? opts.timestamp(index) : opts.timestamp,
+    }))
+
+  it('range mode: stops fetching more pages once maxDetections is reached', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    getDayCachedPageMock.mockReturnValue(null)
+    fetchDetectionsRangePageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0) {
+        return { detections: makeDetections(500, { idPrefix: 'p0', timestamp: '2026-01-05T00:00:00.000Z' }), total: 1000 }
+      }
+      if (offset === 500) {
+        return { detections: makeDetections(500, { idPrefix: 'p1', timestamp: '2026-01-05T00:00:00.000Z' }), total: 1000 }
+      }
+      throw new Error(`unexpected offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'range', maxDetections: 700 }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.detections).toHaveLength(1000)
+    expect(fetchDetectionsRangePageMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('range mode: stops fetching once earlyStopLookupKeys/earlyStopTarget are satisfied within the first page', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    const items = makeDetections(500, { idPrefix: 'p0', timestamp: '2026-01-05T00:00:00.000Z' })
+    items[0] = { ...items[0], commonName: 'Amsel', scientificName: 'Turdus merula' }
+    items[1] = { ...items[1], commonName: 'Kohlmeise', scientificName: 'Parus major' }
+
+    getDayCachedPageMock.mockReturnValue(null)
+    fetchDetectionsRangePageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0) {
+        return { detections: items, total: 500 }
+      }
+      throw new Error(`should not fetch offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () =>
+        useArchiveDetections(start, end, {
+          queryMode: 'range',
+          earlyStopLookupKeys: new Set(['amsel', 'parus major']),
+          earlyStopTarget: 2,
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.detections).toHaveLength(500)
+    expect(fetchDetectionsRangePageMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('range mode: breaks the pagination loop when a page is older than the start of the range', async () => {
+    const start = new Date('2026-01-05T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    getDayCachedPageMock.mockReturnValue(null)
+    fetchDetectionsRangePageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0) {
+        return { detections: makeDetections(500, { idPrefix: 'p0', timestamp: '2026-01-06T00:00:00.000Z' }), total: 1000 }
+      }
+      if (offset === 500) {
+        const page = makeDetections(500, { idPrefix: 'p1', timestamp: '2026-01-06T00:00:00.000Z' })
+        page[page.length - 1] = { ...page[page.length - 1], timestamp: '2026-01-01T00:00:00.000Z' }
+        return { detections: page, total: 1000 }
+      }
+      throw new Error(`unexpected offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'range' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(fetchDetectionsRangePageMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('range mode: keeps paginating across multiple full pages until a short page ends it', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    getDayCachedPageMock.mockReturnValue(null)
+    fetchDetectionsRangePageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0 || offset === 500) {
+        return {
+          detections: makeDetections(500, { idPrefix: `p${offset}`, timestamp: '2026-01-05T00:00:00.000Z' }),
+          total: 1005,
+        }
+      }
+      if (offset === 1000) {
+        return { detections: makeDetections(5, { idPrefix: 'p1000', timestamp: '2026-01-05T00:00:00.000Z' }), total: 1005 }
+      }
+      throw new Error(`unexpected offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'range' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.detections).toHaveLength(1005)
+    expect(fetchDetectionsRangePageMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('range mode: fetches multiple offsets concurrently when parallelBatchSize > 1', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    getDayCachedPageMock.mockReturnValue(null)
+    fetchDetectionsRangePageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0) {
+        return { detections: makeDetections(500, { idPrefix: 'p0', timestamp: '2026-01-05T00:00:00.000Z' }), total: 510 }
+      }
+      if (offset === 500 || offset === 1000) {
+        return {
+          detections: makeDetections(5, { idPrefix: `p${offset}`, timestamp: '2026-01-05T00:00:00.000Z' }),
+          total: 510,
+        }
+      }
+      throw new Error(`unexpected offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'range', parallelBatchSize: 2 }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(fetchDetectionsRangePageMock).toHaveBeenCalledTimes(3)
+    expect(setDayCachedPageMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('global mode: keeps paginating across multiple full pages until a short page ends it', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    fetchDetectionsPageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0 || offset === 500) {
+        return makeDetections(500, { idPrefix: `g${offset}`, timestamp: '2026-01-05T00:00:00.000Z' })
+      }
+      if (offset === 1000) {
+        return makeDetections(5, { idPrefix: 'g1000', timestamp: '2026-01-05T00:00:00.000Z' })
+      }
+      throw new Error(`unexpected offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'global' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.detections).toHaveLength(1005)
+    expect(fetchDetectionsPageMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('global mode: stops fetching more pages once maxDetections is reached', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-10T00:00:00.000Z')
+
+    fetchDetectionsPageMock.mockImplementation(async ({ offset }: { offset: number }) => {
+      if (offset === 0 || offset === 500) {
+        return makeDetections(500, { idPrefix: `g${offset}`, timestamp: '2026-01-05T00:00:00.000Z' })
+      }
+      throw new Error(`unexpected offset ${offset}`)
+    })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'global', maxDetections: 700 }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.detections).toHaveLength(1000)
+    expect(fetchDetectionsPageMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not fetch and stays disabled for an invalid date range', () => {
+    const { result } = renderHook(
+      () => useArchiveDetections(new Date('invalid'), new Date('invalid')),
+      { wrapper: createWrapper() },
+    )
+
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.detections).toEqual([])
+    expect(fetchDetectionsRangePageMock).not.toHaveBeenCalled()
+    expect(fetchDetectionsPageMock).not.toHaveBeenCalled()
+  })
+
+  it('exposes a refresh function that triggers a refetch', async () => {
+    const start = new Date('2026-01-01T00:00:00.000Z')
+    const end = new Date('2026-01-03T00:00:00.000Z')
+
+    getDayCachedPageMock.mockReturnValue(null)
+    fetchDetectionsRangePageMock.mockResolvedValue({ detections: [], total: 0 })
+
+    const { result } = renderHook(
+      () => useArchiveDetections(start, end, { queryMode: 'range' }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    fetchDetectionsRangePageMock.mockClear()
+    await result.current.refresh()
+
+    expect(fetchDetectionsRangePageMock).toHaveBeenCalledTimes(1)
+  })
 })

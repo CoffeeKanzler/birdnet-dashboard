@@ -30,6 +30,12 @@ vi.mock('../../data/notableSpecies', () => ({
       aliases: [],
       description: 'Mock notable species',
     },
+    {
+      commonName: 'Star',
+      scientificName: 'Sturnus vulgaris',
+      aliases: [],
+      description: 'Mock notable species 2',
+    },
   ],
 }))
 
@@ -177,5 +183,114 @@ describe('RarityView', () => {
       commonName: 'Amsel',
       scientificName: 'Turdus merula',
     })
+  })
+
+  it('skips unmatched groups, merges repeated matches, and sorts by most recent sighting', () => {
+    mocks.useSummary30d.mockReturnValue({
+      summary: {
+        pending: false,
+        archive: {
+          groups: [
+            {
+              commonName: 'Unmatched Bird',
+              scientificName: 'Unmatched sci',
+              count: 9,
+              lastSeenAt: '2026-01-05T00:00:00.000Z',
+            },
+            {
+              commonName: 'Amsel',
+              scientificName: 'Turdus merula',
+              count: 2,
+              lastSeenAt: '2026-01-01T00:00:00.000Z',
+            },
+            {
+              commonName: 'Amsel',
+              scientificName: 'Turdus merula',
+              count: 3,
+              lastSeenAt: '2026-01-02T00:00:00.000Z',
+            },
+            {
+              commonName: 'Star',
+              scientificName: 'Sturnus vulgaris',
+              count: 1,
+              lastSeenAt: '2026-01-03T00:00:00.000Z',
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      isPending: false,
+      error: null,
+    })
+
+    renderWithQuery(<RarityView />)
+
+    expect(screen.queryByRole('button', { name: 'Unmatched Bird' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Amsel' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Star' })).toBeInTheDocument()
+  })
+
+  it('breaks a same-timestamp tie by detection count', () => {
+    mocks.useSummary30d.mockReturnValue({
+      summary: {
+        pending: false,
+        archive: {
+          groups: [
+            {
+              commonName: 'Amsel',
+              scientificName: 'Turdus merula',
+              count: 2,
+              lastSeenAt: '2026-01-01T00:00:00.000Z',
+            },
+            {
+              commonName: 'Star',
+              scientificName: 'Sturnus vulgaris',
+              count: 5,
+              lastSeenAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      isPending: false,
+      error: null,
+    })
+
+    renderWithQuery(<RarityView />)
+
+    expect(screen.getByRole('button', { name: 'Amsel' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Star' })).toBeInTheDocument()
+  })
+
+  it('breaks a same-timestamp, same-count tie by localized name', () => {
+    mocks.useSummary30d.mockReturnValue({
+      summary: {
+        pending: false,
+        archive: {
+          groups: [
+            {
+              commonName: 'Star',
+              scientificName: 'Sturnus vulgaris',
+              count: 3,
+              lastSeenAt: '2026-01-01T00:00:00.000Z',
+            },
+            {
+              commonName: 'Amsel',
+              scientificName: 'Turdus merula',
+              count: 3,
+              lastSeenAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      isPending: false,
+      error: null,
+    })
+
+    renderWithQuery(<RarityView />)
+
+    expect(screen.getByRole('button', { name: 'Amsel' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Star' })).toBeInTheDocument()
   })
 })

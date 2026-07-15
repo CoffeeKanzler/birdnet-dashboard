@@ -15,15 +15,16 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
-      include: [
-        'src/App.tsx',
-        'src/api/apiClient.ts',
-        'src/components/ErrorBoundary.tsx',
-        'src/features/statistics/StatisticsView.tsx',
-        'src/i18n/index.ts',
-        'src/utils/errorMessages.ts',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        '**/*.json',
+        'src/test/**',
+        'dist/**',
+        'e2e/**',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        '**/*.test.{ts,tsx}',
       ],
-      exclude: ['**/*.json', 'src/test/**', 'dist/**', 'e2e/**'],
       thresholds: {
         statements: 95,
         lines: 95,

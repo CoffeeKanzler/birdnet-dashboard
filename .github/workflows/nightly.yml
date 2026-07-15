@@ -160,7 +160,6 @@ jobs:
 
       - name: Run full E2E suite
         run: npx playwright test --project=chromium
-        continue-on-error: true
         id: e2e
 
       - name: Write E2E summary
@@ -229,7 +228,7 @@ jobs:
           } else {
             lines.push(
               '',
-              \`> **\${pkgs.length} outdated package\${pkgs.length === 1 ? '' : 's'}** (Renovate will handle these automatically)\`,
+              \`> **\${pkgs.length} outdated package\${pkgs.length === 1 ? '' : 's'}** (Dependabot will handle these automatically)\`,
               '',
               '| Package | Current | Wanted | Latest | Type |',
               '|---------|---------|--------|--------|------|',
