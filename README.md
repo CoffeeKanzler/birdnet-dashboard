@@ -75,6 +75,9 @@ npm run preview        # preview production build
 - `FAMILY_RATE_LIMIT_COOLDOWN_MS`
 - `HEALTHCHECK_TOKEN`
 - `INTERNAL_PROXY_VALUE`
+- `TRUSTED_PROXY_IP` (trusted reverse-proxy address for `CF-Connecting-IP`; defaults to loopback)
+
+Set `TRUSTED_PROXY_IP` only to the exact fixed address of a trusted proxy. NGINX trusts `CF-Connecting-IP` only from that source; it does not trust arbitrary `X-Forwarded-For` values. For Cloudflare Tunnel, pin the tunnel container's address on the shared Docker network and use that address here.
 
 ## Docker
 
@@ -99,6 +102,7 @@ docker run --rm \
   -p 127.0.0.1:8080:8080 \
   -e BIRDNET_API_BASE_URL=http://birdnet-go:8080 \
   -e HEALTHCHECK_TOKEN="${HEALTHCHECK_TOKEN:?generate a random token first}" \
+  -e TRUSTED_PROXY_IP="${TRUSTED_PROXY_IP:-127.0.0.1}" \
   -v birdnet-dashboard-cache:/cache \
   birdnet-dashboard:latest
 ```

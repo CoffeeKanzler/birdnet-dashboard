@@ -6,6 +6,9 @@ if [ -z "${INTERNAL_PROXY_VALUE:-}" ]; then
   export INTERNAL_PROXY_VALUE
 fi
 
+TRUSTED_PROXY_IP="${TRUSTED_PROXY_IP:-127.0.0.1}"
+export TRUSTED_PROXY_IP
+
 if [ ! -w /cache ]; then
   echo "cache directory /cache is not writable by uid $(id -u)" >&2
   exit 1
@@ -19,6 +22,11 @@ export RUNTIME_CONFIG_PATH
 
 node <<'EOF'
 const fs = require('node:fs')
+const { isIP } = require('node:net')
+
+if (!isIP(process.env.TRUSTED_PROXY_IP || '')) {
+  throw new Error('TRUSTED_PROXY_IP must be a single IPv4 or IPv6 literal')
+}
 
 const path = process.env.RUNTIME_CONFIG_PATH || '/cache/runtime-config.js'
 const keys = [
