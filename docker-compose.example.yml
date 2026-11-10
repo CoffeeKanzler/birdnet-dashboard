@@ -14,6 +14,9 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    # Container-scoped setting lets UID 101 bind port 80 without capabilities.
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: "0"
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m,mode=1777
     depends_on:
