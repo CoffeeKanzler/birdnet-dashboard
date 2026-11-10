@@ -2,6 +2,11 @@ import { createServer } from 'node:http'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { hasFamilyIntersection, tokenizeFamilyLabel } from './family-matches.mjs'
+import {
+  normalizeDetectionsQuery,
+  parseBoundedPositiveInt,
+  sliceDetectionsPage,
+} from './request-limits.mjs'
 
 const PORT = Number(process.env.PORT ?? '3001')
 const HOST = process.env.HOST ?? '127.0.0.1'
@@ -15,6 +20,7 @@ const SUMMARY_CACHE_FILE = process.env.SUMMARY_CACHE_FILE ?? '/cache/summary-30d
 const RECENT_CACHE_FILE = process.env.RECENT_CACHE_FILE ?? '/cache/recent-detections.json'
 const FAMILY_CACHE_FILE = process.env.FAMILY_CACHE_FILE ?? '/cache/family-matches.json'
 const RECENT_SNAPSHOT_LIMIT = Number(process.env.RECENT_SNAPSHOT_LIMIT ?? '2000')
+const MAX_RECENT_RESPONSE_LIMIT = 2000
 const RECENT_REFRESH_MS = Number(process.env.RECENT_REFRESH_MS ?? `${15 * 60_000}`)
 const FAMILY_MATCH_TTL_MS = Number(process.env.FAMILY_MATCH_TTL_MS ?? `${60 * 60_000}`)
 const FAMILY_PARTIAL_MATCH_TTL_MS = Number(process.env.FAMILY_PARTIAL_MATCH_TTL_MS ?? `${5 * 60_000}`)
@@ -33,18 +39,6 @@ const FAMILY_CACHE_MAX_ENTRIES = Number(process.env.FAMILY_CACHE_MAX_ENTRIES ?? 
 const CACHE_CONTROL_SUMMARY = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400'
 const CACHE_CONTROL_RECENT = 'public, max-age=15, s-maxage=60, stale-while-revalidate=120, stale-if-error=300'
 const CACHE_CONTROL_FAMILY = 'public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=86400'
-const CONTENT_SECURITY_POLICY =
-  "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: https://upload.wikimedia.org https://commons.wikimedia.org; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://de.wikipedia.org https://en.wikipedia.org https://commons.wikimedia.org https://upload.wikimedia.org; font-src 'self' data: https://fonts.gstatic.com; form-action 'self'"
-
-const securityHeaders = {
-  'content-security-policy': CONTENT_SECURITY_POLICY,
-  'x-content-type-options': 'nosniff',
-  'x-frame-options': 'DENY',
-  'referrer-policy': 'strict-origin-when-cross-origin',
-  'permissions-policy': 'camera=(), microphone=(), geolocation=()',
-  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
-}
-
 const summaryCache = {
   inFlight: null,
 }
@@ -186,7 +180,6 @@ const persistFamilyCacheToDisk = async () => {
 
 const json = (res, status, payload, extraHeaders = {}) => {
   res.writeHead(status, {
-    ...securityHeaders,
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
     ...extraHeaders,
@@ -654,15 +647,15 @@ const fallbackRecentDetections = async (limit) => {
     .slice(0, limit)
 }
 
-const fallbackDetectionsPage = async (url) => {
+const fallbackDetectionsPage = async (url, searchParams = url.searchParams) => {
   const recent = await loadRecentFromDisk()
   if (!recent) {
     return null
   }
 
   let detections = recent.detections.slice().sort(compareByNewest)
-  const queryType = url.searchParams.get('queryType')
-  const search = (url.searchParams.get('search') ?? '').trim().toLowerCase()
+  const queryType = searchParams.get('queryType')
+  const search = (searchParams.get('search') ?? '').trim().toLowerCase()
   if (queryType === 'search' && search) {
     detections = detections.filter((entry) => {
       const commonName = String(entry?.common_name ?? entry?.commonName ?? '').toLowerCase()
@@ -671,8 +664,8 @@ const fallbackDetectionsPage = async (url) => {
     })
   }
 
-  const startDate = url.searchParams.get('start_date')
-  const endDate = url.searchParams.get('end_date')
+  const startDate = searchParams.get('start_date')
+  const endDate = searchParams.get('end_date')
   if (startDate && endDate) {
     const startMs = new Date(`${startDate}T00:00:00.000Z`).valueOf()
     const endExclusiveMs = new Date(`${endDate}T00:00:00.000Z`).valueOf() + 24 * 60 * 60 * 1000
@@ -682,15 +675,13 @@ const fallbackDetectionsPage = async (url) => {
     })
   }
 
-  const numResults = parsePositiveInt(url.searchParams.get('numResults'), PAGE_LIMIT)
-  const offset = parsePositiveInt(url.searchParams.get('offset'), 0)
-  return detections.slice(offset, offset + numResults)
+  return sliceDetectionsPage(detections, searchParams)
 }
 
 const server = createServer(async (req, res) => {
   try {
     if (!req.url || !req.method) {
-      res.writeHead(400, securityHeaders)
+      res.writeHead(400)
       res.end('Bad Request')
       return
     }
@@ -701,16 +692,14 @@ const server = createServer(async (req, res) => {
     if (pathname === '/healthz') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
       }
       if (req.method === 'HEAD') {
         res.writeHead(200, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         })
         res.end()
@@ -723,8 +712,7 @@ const server = createServer(async (req, res) => {
     if (pathname === '/readyz') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
@@ -735,8 +723,7 @@ const server = createServer(async (req, res) => {
       const status = ready ? 200 : 503
       if (req.method === 'HEAD') {
         res.writeHead(status, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         })
         res.end()
@@ -751,8 +738,7 @@ const server = createServer(async (req, res) => {
     if (pathname === '/cachez') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
@@ -771,8 +757,7 @@ const server = createServer(async (req, res) => {
       }
       if (req.method === 'HEAD') {
         res.writeHead(payload.status === 'healthy' ? 200 : 503, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
         })
         res.end()
@@ -790,20 +775,23 @@ const server = createServer(async (req, res) => {
     if (pathname === '/api/v2/detections/recent') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
       }
 
-      const limit = parsePositiveInt(url.searchParams.get('limit'), 100)
+      const limit = parseBoundedPositiveInt(
+        url.searchParams.get('limit'),
+        100,
+        MAX_RECENT_RESPONSE_LIMIT,
+      )
+      const upstreamParams = new URLSearchParams({ limit: String(limit) })
       try {
-        const upstream = await proxyUpstreamJson(`${pathname}?${url.searchParams.toString()}`)
+        const upstream = await proxyUpstreamJson(`${pathname}?${upstreamParams.toString()}`)
         if (upstream.status < 500) {
           res.writeHead(upstream.status, {
-            ...securityHeaders,
-            'content-type': 'application/json; charset=utf-8',
+                    'content-type': 'application/json; charset=utf-8',
             'cache-control': CACHE_CONTROL_RECENT,
             'x-detections-cache': 'live',
           })
@@ -826,8 +814,7 @@ const server = createServer(async (req, res) => {
 
       if (req.method === 'HEAD') {
         res.writeHead(200, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': CACHE_CONTROL_RECENT,
           'x-detections-cache': 'stale',
         })
@@ -845,21 +832,18 @@ const server = createServer(async (req, res) => {
     if (pathname === '/api/v2/detections') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
       }
 
+      const upstreamParams = normalizeDetectionsQuery(url.searchParams)
       try {
-        const upstream = await proxyUpstreamJson(
-          url.search ? `${pathname}?${url.searchParams.toString()}` : pathname,
-        )
+        const upstream = await proxyUpstreamJson(`${pathname}?${upstreamParams.toString()}`)
         if (upstream.status < 500) {
           res.writeHead(upstream.status, {
-            ...securityHeaders,
-            'content-type': 'application/json; charset=utf-8',
+                    'content-type': 'application/json; charset=utf-8',
             'cache-control': 'no-store',
             'x-detections-cache': 'live',
           })
@@ -874,7 +858,7 @@ const server = createServer(async (req, res) => {
         // Fall through to snapshot.
       }
 
-      const fallback = await fallbackDetectionsPage(url)
+      const fallback = await fallbackDetectionsPage(url, upstreamParams)
       if (!fallback) {
         json(res, 503, { message: 'upstream_unavailable' })
         return
@@ -882,8 +866,7 @@ const server = createServer(async (req, res) => {
 
       if (req.method === 'HEAD') {
         res.writeHead(200, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
           'x-detections-cache': 'stale',
         })
@@ -900,8 +883,7 @@ const server = createServer(async (req, res) => {
     if (pathname === '/api/v2/summary/30d') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
@@ -911,8 +893,7 @@ const server = createServer(async (req, res) => {
       if (state.isFresh && state.payload) {
         if (req.method === 'HEAD') {
           res.writeHead(200, {
-            ...securityHeaders,
-            'content-type': 'application/json; charset=utf-8',
+                    'content-type': 'application/json; charset=utf-8',
             'cache-control': CACHE_CONTROL_SUMMARY,
             'x-summary-cache': 'fresh',
           })
@@ -930,8 +911,7 @@ const server = createServer(async (req, res) => {
         startSummaryRefresh().catch(() => {})
         if (req.method === 'HEAD') {
           res.writeHead(200, {
-            ...securityHeaders,
-            'content-type': 'application/json; charset=utf-8',
+                    'content-type': 'application/json; charset=utf-8',
             'cache-control': CACHE_CONTROL_SUMMARY,
             'x-summary-cache': 'stale',
           })
@@ -948,8 +928,7 @@ const server = createServer(async (req, res) => {
       startSummaryRefresh().catch(() => {})
       if (req.method === 'HEAD') {
         res.writeHead(202, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': 'no-store',
           'retry-after': '3',
           'x-summary-cache': 'warming',
@@ -976,8 +955,7 @@ const server = createServer(async (req, res) => {
     if (pathname === '/api/v2/family-matches') {
       if (!['GET', 'HEAD'].includes(req.method)) {
         res.writeHead(405, {
-          ...securityHeaders,
-          allow: 'GET, HEAD, OPTIONS',
+                allow: 'GET, HEAD, OPTIONS',
         })
         res.end()
         return
@@ -1011,8 +989,7 @@ const server = createServer(async (req, res) => {
         }
         if (req.method === 'HEAD') {
           res.writeHead(200, {
-            ...securityHeaders,
-            'content-type': 'application/json; charset=utf-8',
+                    'content-type': 'application/json; charset=utf-8',
             'cache-control': CACHE_CONTROL_FAMILY,
             'x-family-cache': 'fresh',
           })
@@ -1045,8 +1022,7 @@ const server = createServer(async (req, res) => {
           }
           if (req.method === 'HEAD') {
             res.writeHead(200, {
-              ...securityHeaders,
-              'content-type': 'application/json; charset=utf-8',
+                        'content-type': 'application/json; charset=utf-8',
               'cache-control': CACHE_CONTROL_FAMILY,
               'x-family-cache': 'stale',
             })
@@ -1062,8 +1038,7 @@ const server = createServer(async (req, res) => {
         }
         if (req.method === 'HEAD') {
           res.writeHead(202, {
-            ...securityHeaders,
-            'content-type': 'application/json; charset=utf-8',
+                    'content-type': 'application/json; charset=utf-8',
             'cache-control': 'no-store',
             'retry-after': '3',
             'x-family-cache': 'warming',
@@ -1101,8 +1076,7 @@ const server = createServer(async (req, res) => {
 
       if (req.method === 'HEAD') {
         res.writeHead(200, {
-          ...securityHeaders,
-          'content-type': 'application/json; charset=utf-8',
+                'content-type': 'application/json; charset=utf-8',
           'cache-control': CACHE_CONTROL_FAMILY,
           'x-family-cache': 'fresh',
         })

@@ -6,13 +6,21 @@ if [ -z "${INTERNAL_PROXY_VALUE:-}" ]; then
   export INTERNAL_PROXY_VALUE
 fi
 
-RUNTIME_CONFIG_PATH="${RUNTIME_CONFIG_PATH:-/usr/share/nginx/html/runtime-config.js}"
+if [ ! -w /cache ]; then
+  echo "cache directory /cache is not writable by uid $(id -u)" >&2
+  exit 1
+fi
+
+mkdir -p /tmp/nginx/conf.d /tmp/nginx/client_temp /tmp/nginx/proxy_temp \
+  /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp
+
+RUNTIME_CONFIG_PATH="${RUNTIME_CONFIG_PATH:-/cache/runtime-config.js}"
 export RUNTIME_CONFIG_PATH
 
 node <<'EOF'
 const fs = require('node:fs')
 
-const path = process.env.RUNTIME_CONFIG_PATH || '/usr/share/nginx/html/runtime-config.js'
+const path = process.env.RUNTIME_CONFIG_PATH || '/cache/runtime-config.js'
 const keys = [
   'VITE_SITE_NAME',
   'VITE_SITE_TAGLINE',
@@ -34,13 +42,6 @@ const content = `window.__BIRDNET_CONFIG__ = Object.freeze(${JSON.stringify(conf
 fs.writeFileSync(path, content, { encoding: 'utf8' })
 EOF
 
-# Repair bind-mounted cache permissions on boot (best effort) so cache refresh
-# can persist regardless of host-side ownership drift.
-if [ -d /cache ]; then
-  chown -R nginx:nginx /cache 2>/dev/null || true
-  chmod -R u+rwX /cache 2>/dev/null || true
-fi
-
-su-exec nginx node /app/server/server.mjs &
+node /app/server/server.mjs &
 
 exec /docker-entrypoint.sh nginx -g 'daemon off;'
