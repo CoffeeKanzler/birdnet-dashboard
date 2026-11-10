@@ -22,6 +22,11 @@ export RUNTIME_CONFIG_PATH
 
 node <<'EOF'
 const fs = require('node:fs')
+const { isIP } = require('node:net')
+
+if (!isIP(process.env.TRUSTED_PROXY_IP || '')) {
+  throw new Error('TRUSTED_PROXY_IP must be a single IPv4 or IPv6 literal')
+}
 
 const path = process.env.RUNTIME_CONFIG_PATH || '/cache/runtime-config.js'
 const keys = [
