@@ -94,6 +94,7 @@ docker run --rm \
   --read-only \
   --cap-drop ALL \
   --security-opt no-new-privileges:true \
+  --sysctl net.ipv4.ip_unprivileged_port_start=0 \
   --tmpfs /tmp:rw,noexec,nosuid,size=64m,mode=1777 \
   -p 127.0.0.1:8080:8080 \
   -e BIRDNET_API_BASE_URL=http://birdnet-go:8080 \
@@ -102,7 +103,7 @@ docker run --rm \
   birdnet-dashboard:latest
 ```
 
-The container listens on port `8080`. The command publishes it on host port `8080` on localhost only; when using Traefik, omit `-p` and configure the router's backend port as `8080`. The example assumes the container joins a Docker network where the `birdnet-go` hostname resolves. The health token protects monitoring endpoints if the listener is later exposed; do not use a fixed example token.
+The container listens on ports `80` and `8080`: port `80` preserves Cloudflare Tunnel compatibility, while Traefik uses `8080`. The container-scoped `net.ipv4.ip_unprivileged_port_start=0` setting lets UID/GID `101:101` bind port `80` without granting capabilities; it does not change the host setting. The command publishes only host port `8080` on localhost; when using Traefik, omit `-p` and configure the router's backend port as `8080`. The example assumes the container joins a Docker network where the `birdnet-go` hostname resolves. The health token protects monitoring endpoints if the listener is later exposed; do not use a fixed example token.
 
 The named Docker volume is initialized with the image's `/cache` ownership for UID/GID `101:101` and preserves snapshots across restarts. For a Linux bind mount instead, create the directory and make it writable by that UID before starting the container:
 

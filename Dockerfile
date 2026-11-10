@@ -44,7 +44,7 @@ RUN chmod +x /start.sh \
     && mkdir -p /cache /tmp/nginx/conf.d /var/cache/nginx \
     && chown -R nginx:nginx /app /usr/share/nginx/html /cache /tmp/nginx /var/cache/nginx /start.sh
 
-EXPOSE 8080
+EXPOSE 80 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -q -T 4 -O - http://127.0.0.1:8080/healthz >/dev/null || exit 1
