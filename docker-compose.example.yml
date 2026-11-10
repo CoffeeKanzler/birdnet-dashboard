@@ -8,16 +8,25 @@ services:
   birdnet-dashboard:
     image: ghcr.io/your-org/birdnet-dashboard:latest
     restart: unless-stopped
+    user: "101:101"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
     depends_on:
       - birdnet-go
     ports:
-      - "8080:80"
+      # Omit this published port when routing through Traefik.
+      - "127.0.0.1:8080:8080"
     environment:
       - BIRDNET_API_BASE_URL=http://birdnet-go:8080
       - SUMMARY_CACHE_FILE=/cache/summary-30d.json
       - RECENT_CACHE_FILE=/cache/recent-detections.json
       - FAMILY_CACHE_FILE=/cache/family-matches.json
-      - HEALTHCHECK_TOKEN=change-me
+      - "HEALTHCHECK_TOKEN=${HEALTHCHECK_TOKEN:?Set a random token in the environment}"
       # Runtime frontend branding/config (no rebuild required):
       - VITE_SITE_NAME=My Bird Dashboard
       - VITE_SITE_TAGLINE=Live detections from my station.
@@ -28,4 +37,8 @@ services:
       # Keep empty to use same-origin proxy.
       - VITE_BIRDNET_API_BASE_URL=
     volumes:
-      - ./birdnet-dashboard-cache:/cache
+      # New named volumes inherit /cache ownership (UID/GID 101:101) from the image.
+      - birdnet-dashboard-cache:/cache
+
+volumes:
+  birdnet-dashboard-cache:

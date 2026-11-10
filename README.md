@@ -87,14 +87,31 @@ docker build -t birdnet-dashboard:latest .
 Run (example):
 
 ```bash
-docker run --rm -p 8080:80 \
+export HEALTHCHECK_TOKEN="$(openssl rand -hex 32)"
+
+docker run --rm \
+  --user 101:101 \
+  --read-only \
+  --cap-drop ALL \
+  --security-opt no-new-privileges:true \
+  --tmpfs /tmp:rw,noexec,nosuid,size=64m,mode=1777 \
+  -p 127.0.0.1:8080:8080 \
   -e BIRDNET_API_BASE_URL=http://birdnet-go:8080 \
-  -e HEALTHCHECK_TOKEN=change-me \
-  -v $(pwd)/.cache:/cache \
+  -e HEALTHCHECK_TOKEN="${HEALTHCHECK_TOKEN:?generate a random token first}" \
+  -v birdnet-dashboard-cache:/cache \
   birdnet-dashboard:latest
 ```
 
-Persistent `/cache` storage is recommended so cache snapshots survive container restarts.
+The container listens on port `8080`. The command publishes it on host port `8080` on localhost only; when using Traefik, omit `-p` and configure the router's backend port as `8080`. The example assumes the container joins a Docker network where the `birdnet-go` hostname resolves. The health token protects monitoring endpoints if the listener is later exposed; do not use a fixed example token.
+
+The named Docker volume is initialized with the image's `/cache` ownership for UID/GID `101:101` and preserves snapshots across restarts. For a Linux bind mount instead, create the directory and make it writable by that UID before starting the container:
+
+```bash
+mkdir -p .cache
+sudo chown 101:101 .cache
+```
+
+Then replace `-v birdnet-dashboard-cache:/cache` with `-v "$(pwd)/.cache:/cache"`.
 
 ## API Surface
 

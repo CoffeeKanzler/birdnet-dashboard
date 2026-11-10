@@ -83,6 +83,7 @@ test('species card layout', async ({ page }) => {
 })
 
 test('today view empty state layout', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00.000Z') })
   await installEmptyBirdnetApiMocks(page)
 
   await page.goto('/?view=today')

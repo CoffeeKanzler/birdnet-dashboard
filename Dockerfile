@@ -1,4 +1,4 @@
-FROM node:26-alpine AS build
+FROM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS build
 
 WORKDIR /app
 
@@ -25,26 +25,29 @@ ENV VITE_SITE_NAME=$VITE_SITE_NAME \
 
 RUN npm run build
 
-FROM nginx:alpine
+FROM nginx:alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
 
 RUN apk upgrade --no-cache \
-    && apk add --no-cache nodejs libcap su-exec \
-    && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx
+    && apk add --no-cache nodejs \
+    && rm -f /etc/nginx/conf.d/default.conf
 
 WORKDIR /app
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx/conf.d
 
 COPY docker/nginx.main.conf /etc/nginx/nginx.conf
 COPY docker/nginx.conf /etc/nginx/templates/default.conf.template
+COPY docker/security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY server /app/server
 COPY docker/start.sh /start.sh
 RUN chmod +x /start.sh \
-    && mkdir -p /cache /tmp/nginx /var/cache/nginx /etc/nginx/conf.d \
-    && chown -R nginx:nginx /app /usr/share/nginx/html /etc/nginx/conf.d /cache /tmp/nginx /var/cache/nginx /start.sh
+    && mkdir -p /cache /tmp/nginx/conf.d /var/cache/nginx \
+    && chown -R nginx:nginx /app /usr/share/nginx/html /cache /tmp/nginx /var/cache/nginx /start.sh
 
-EXPOSE 80
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -q -T 4 -O - http://127.0.0.1/healthz >/dev/null || exit 1
+  CMD wget -q -T 4 -O - http://127.0.0.1:8080/healthz >/dev/null || exit 1
 
+USER nginx
 CMD ["/start.sh"]
