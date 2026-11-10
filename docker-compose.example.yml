@@ -30,6 +30,8 @@ services:
       - RECENT_CACHE_FILE=/cache/recent-detections.json
       - FAMILY_CACHE_FILE=/cache/family-matches.json
       - "HEALTHCHECK_TOKEN=${HEALTHCHECK_TOKEN:?Set a random token in the environment}"
+      # Set to the exact fixed IP of the trusted reverse proxy, never its whole subnet.
+      - "TRUSTED_PROXY_IP=${TRUSTED_PROXY_IP:-127.0.0.1}"
       # Runtime frontend branding/config (no rebuild required):
       - VITE_SITE_NAME=My Bird Dashboard
       - VITE_SITE_TAGLINE=Live detections from my station.

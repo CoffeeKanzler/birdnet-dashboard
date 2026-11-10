@@ -6,6 +6,9 @@ if [ -z "${INTERNAL_PROXY_VALUE:-}" ]; then
   export INTERNAL_PROXY_VALUE
 fi
 
+TRUSTED_PROXY_IP="${TRUSTED_PROXY_IP:-127.0.0.1}"
+export TRUSTED_PROXY_IP
+
 if [ ! -w /cache ]; then
   echo "cache directory /cache is not writable by uid $(id -u)" >&2
   exit 1
